@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>PULLUP — Klimmzug Tracker</title>
+<meta name="theme-color" content="#F3F7F4">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: 'var(--color-bg)',
+          surface: 'var(--color-surface)',
+          surface2: 'var(--color-surface2)',
+          line: 'var(--color-line)',
+          accent: 'var(--color-accent)',
+          accent2: 'var(--color-accent2)',
+          muted: 'var(--color-muted)',
+          textmain: 'var(--color-textmain)',
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          body: ['Inter', 'sans-serif'],
+        },
+        boxShadow: {
+          glow: '0 0 24px -4px var(--glow-color-a)',
+          glowBlue: '0 0 24px -4px var(--glow-color-b)',
+        }
+      }
+    }
+  }
+</script>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+<style>
+  :root, [data-theme="dark"] {
+    --color-bg: #06090A;
+    --color-surface: #0F1613;
+    --color-surface2: #141D19;
+    --color-line: #1E2B25;
+    --color-accent: #39FF8C;
+    --color-accent2: #2FD1FF;
+    --color-muted: #7C9188;
+    --color-textmain: #EAFBF2;
+    --glow-color-a: rgba(57,255,140,0.45);
+    --glow-color-b: rgba(47,209,255,0.45);
+    --glow-pulse: rgba(57,255,140,0.35);
+    --thumb-shadow: rgba(57,255,140,0.5);
+    --flap-tile-bg: #12201A;
+    --flap-tile-bg2: #0C1512;
+    --flap-tile-line: #24352C;
+    --flap-tile-fg: #EAFBF2;
+    --flap-groove: rgba(0,0,0,0.55);
+    --flap-tile-shadow: rgba(0,0,0,0.45);
+  }
+  [data-theme="light"] {
+    --color-bg: #F3F7F4;
+    --color-surface: #FFFFFF;
+    --color-surface2: #EEF3EF;
+    --color-line: #DCE6DF;
+    --color-accent: #178F58;
+    --color-accent2: #0F7FA8;
+    --color-muted: #75887C;
+    --color-textmain: #1C2620;
+    --glow-color-a: rgba(23,143,88,0.28);
+    --glow-color-b: rgba(15,127,168,0.28);
+    --glow-pulse: rgba(23,143,88,0.22);
+    --thumb-shadow: rgba(23,143,88,0.35);
+    --flap-tile-bg: #EAF1EC;
+    --flap-tile-bg2: #DDE7E0;
+    --flap-tile-line: #CBD9D0;
+    --flap-tile-fg: #1C2620;
+    --flap-groove: rgba(0,0,0,0.18);
+    --flap-tile-shadow: rgba(0,0,0,0.12);
+  }
+  html, body { background-color: var(--color-bg); overscroll-behavior-y: none; transition: background-color .25s ease; }
+  body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 3px; }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0px rgba(0,0,0,0); }
+    50% { box-shadow: 0 0 30px var(--glow-pulse); }
+  }
+  .glow-pulse { animation: pulse-glow 2.2s ease-in-out infinite; }
+
+  @keyframes chip-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .set-chip-active { animation: chip-pulse 1.6s ease-in-out infinite; }
+  .set-chip-done { opacity: 0.4; text-decoration: line-through; }
+
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .rise-in { animation: rise-in .25s ease-out; }
+
+  @keyframes tick-pulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+  .tick-pulse::after {
+    content: '';
+    position: absolute; inset: 0; border-radius: 9999px;
+    background: currentColor; opacity: 0;
+  }
+  .tick-pulse.firing::after { animation: tick-pulse 0.5s ease-out; }
+
+  .ring-progress {
+    transition: stroke-dashoffset 0.12s linear, stroke 0.4s ease;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+  }
+
+  .press-scale { transition: transform .12s ease; }
+  .press-scale:active { transform: scale(0.94); }
+
+  .seg-btn.active { background: color-mix(in srgb, var(--color-accent) 14%, transparent); border-color: var(--color-accent); color: var(--color-accent); }
+  .tab-btn.active { background: var(--color-accent); color: var(--color-bg); }
+  .theme-btn.active { background: var(--color-accent); color: var(--color-bg); border-color: var(--color-accent); }
+
+  .nav-btn { color: var(--color-muted); }
+  button svg, button i[data-lucide] { pointer-events: none; }
+  .nav-btn.active { color: var(--color-accent); }
+
+  input[type=range] { -webkit-appearance: none; height: 4px; border-radius: 999px; background: var(--color-line); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 999px;
+    background: var(--color-accent); cursor: pointer; box-shadow: 0 0 8px var(--thumb-shadow);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 999px; border: none;
+    background: var(--color-accent); cursor: pointer; box-shadow: 0 0 8px var(--thumb-shadow);
+  }
+
+  /* ===== Split-Flap Counter (Bahnhofstafel) ===== */
+  .flap-board { display: flex; gap: 4px; }
+  .flap-tile {
+    position: relative; width: 22px; height: 32px;
+    perspective: 120px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+  }
+  .flap-half {
+    position: absolute; left: 0; right: 0; height: 50%; overflow: hidden;
+    background: linear-gradient(180deg, var(--flap-tile-bg), var(--flap-tile-bg2));
+    box-shadow: inset 0 0 4px var(--flap-tile-shadow);
+  }
+  .flap-half .num {
+    position: absolute; left: 0; right: 0; top: 0; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 21px; line-height: 1; color: var(--flap-tile-fg);
+  }
+  .flap-top { top: 0; border-radius: 4px 4px 0 0; }
+  .flap-bottom { bottom: 0; border-radius: 0 0 4px 4px; }
+  .flap-bottom .num { top: -16px; }
+  .flap-leaf {
+    position: absolute; left: 0; right: 0; height: 50%; overflow: hidden;
+    background: linear-gradient(180deg, var(--flap-tile-bg), var(--flap-tile-bg2));
+    backface-visibility: hidden;
+    transition: transform .16s cubic-bezier(.6,0,.4,1);
+  }
+  .flap-leaf .num {
+    position: absolute; left: 0; right: 0; top: 0; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 21px; line-height: 1; color: var(--flap-tile-fg);
+  }
+  .flap-leaf-top { top: 0; transform-origin: bottom; border-radius: 4px 4px 0 0; transform: rotateX(0deg); }
+  .flap-leaf-bottom { bottom: 0; transform-origin: top; border-radius: 0 0 4px 4px; transform: rotateX(90deg); }
+  .flap-leaf-bottom .num { top: -16px; }
+  .flap-groove { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--flap-groove); z-index: 6; transform: translateY(-0.5px); }
+  .flap-tile-new { animation: flap-tile-pop .22s ease-out; }
+  @keyframes flap-tile-pop { from { opacity: 0; transform: translateY(-4px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glow-pulse, .rise-in, .tick-pulse.firing::after { animation: none !important; }
+    .press-scale { transition: none !important; }
+  }
+
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+</style>
+</head>
+
+<body class="bg-bg text-textmain min-h-screen pb-24">
+
+<audio id="bgSong" src="pull.mp3" loop preload="none"></audio>
+
+<!-- TOP BAR: fixiertes Header-Menü -->
+<div id="topBar" class="fixed top-0 inset-x-0 z-30 bg-bg border-b border-line" style="padding-top: env(safe-area-inset-top)">
+  <div class="max-w-md mx-auto px-4">
+    <header class="flex items-center gap-2.5 py-3">
+      <div id="allTimeCounterWrap">
+        <div id="flapBoard" class="flap-board"></div>
+      </div>
+      <div>
+        <h1 class="font-display font-bold text-lg leading-none tracking-tight">PULLUP</h1>
+        <p class="text-[11px] text-muted leading-none mt-1">Klimmzug Tracker</p>
+      </div>
+
+      <button id="startWorkoutBtn" class="hidden ml-auto glow-pulse press-scale h-10 px-3.5 rounded-xl bg-accent text-bg font-display font-bold text-xs items-center justify-center gap-1.5 shadow-glow whitespace-nowrap">
+        <i data-lucide="play" style="width:14px;height:14px"></i>
+        Start
+      </button>
+    </header>
+  </div>
+</div>
+
+<div id="mainContent" class="max-w-md mx-auto px-4 pb-4">
+
+  <!-- TAB PANEL: WORKOUT -->
+
+  <div id="tabPanel-workout" class="tab-panel">
+    <section id="workoutCard" class="rounded-3xl bg-surface border border-line p-5 mb-4">
+
+      <!-- CONFIG VIEW -->
+      <div id="configView">
+        <p class="text-[11px] uppercase tracking-widest text-muted mb-3">Geführtes Workout</p>
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-sm">Sätze</span>
+            <div class="flex items-center gap-1.5">
+              <button id="numSetsMinus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="minus" style="width:13px;height:13px"></i></button>
+              <span id="numSetsLabel" class="text-sm w-8 text-center tabular">7</span>
+              <button id="numSetsPlus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="plus" style="width:13px;height:13px"></i></button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-sm">Start-Wiederholungen</span>
+            <div class="flex items-center gap-1.5">
+              <button id="startRepsMinus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="minus" style="width:13px;height:13px"></i></button>
+              <span id="startRepsLabel" class="text-sm w-8 text-center tabular">5</span>
+              <button id="startRepsPlus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="plus" style="width:13px;height:13px"></i></button>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-sm mb-1.5">Schema</p>
+            <div id="schemeTypeSelect" class="grid grid-cols-4 gap-1.5 mb-3">
+              <button class="seg-btn active press-scale border border-line bg-surface2 rounded-lg py-2 text-[10px] font-medium leading-tight" data-scheme-type="standard">Standard</button>
+              <button class="seg-btn press-scale border border-line bg-surface2 rounded-lg py-2 text-[10px] font-medium leading-tight" data-scheme-type="same">Same</button>
+              <button class="seg-btn press-scale border border-line bg-surface2 rounded-lg py-2 text-[10px] font-medium leading-tight" data-scheme-type="pyramide">Pyramide</button>
+              <button class="seg-btn press-scale border border-line bg-surface2 rounded-lg py-2 text-[10px] font-medium leading-tight" data-scheme-type="absteigend">Absteigend</button>
+            </div>
+            <div class="border-t border-line pt-3">
+              <div id="schemeChips" class="grid grid-cols-4 gap-2"></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-sm">Pause zwischen Sätzen</span>
+            <div class="flex items-center gap-1.5">
+              <button id="restMinus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="minus" style="width:13px;height:13px"></i></button>
+              <span id="restLabel" class="text-sm w-10 text-center tabular">90s</span>
+              <button id="restPlus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="plus" style="width:13px;height:13px"></i></button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-sm">Tempo pro Wiederholung</span>
+            <div class="flex items-center gap-1.5">
+              <button id="tempoMinus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="minus" style="width:13px;height:13px"></i></button>
+              <span id="tempoLabel" class="text-sm w-10 text-center tabular">2.0s</span>
+              <button id="tempoPlus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="plus" style="width:13px;height:13px"></i></button>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs text-muted mb-1.5 pt-1">Grifftyp</p>
+            <div id="gripSelect" class="grid grid-cols-2 gap-2">
+              <button class="seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium" data-grip="Obergriff">Obergriff</button>
+              <button class="seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium" data-grip="Untergriff">Untergriff</button>
+              <button class="seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium" data-grip="Hammergriff">Hammergriff</button>
+              <button class="seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium" data-grip="Scapula">Scapula</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE VIEW -->
+      <div id="liveView" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <span id="livePhaseLabel" class="text-sm font-medium">Satz läuft</span>
+          <span id="liveSetCounter" class="text-xs text-muted tabular">Satz 1/7</span>
+        </div>
+
+        <div class="w-full h-1.5 rounded-full bg-surface2 overflow-hidden mb-4">
+          <div id="workoutProgressBar" class="h-full bg-accent transition-all" style="width:0%"></div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center py-2">
+          <span id="liveTargetAbove" class="hidden text-sm font-semibold tracking-wide text-muted mb-2 uppercase"></span>
+          <div class="relative w-44 h-44">
+            <svg viewBox="0 0 160 160" class="w-full h-full">
+              <circle cx="80" cy="80" r="70" fill="none" style="stroke:var(--color-line)" stroke-width="10"/>
+              <circle id="liveRing" class="ring-progress" cx="80" cy="80" r="70" fill="none" style="stroke:var(--color-accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="439.8" stroke-dashoffset="0"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span id="liveDisplay" class="font-display font-bold text-4xl tabular">0</span>
+              <span id="liveSubLabel" class="text-[10px] uppercase tracking-widest text-muted mt-1">Ziel: 5</span>
+            </div>
+            <div id="tickDot" class="tick-pulse absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-accent text-accent"></div>
+          </div>
+        </div>
+
+        <div id="repsAdjustRow" class="flex items-center justify-center gap-3 mt-1 mb-1">
+          <span class="text-xs text-muted">Geschafft:</span>
+          <button id="repsDoneMinus" class="w-8 h-8 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="minus" style="width:13px;height:13px"></i></button>
+          <span id="repsDoneLabel" class="font-display font-bold text-lg tabular w-6 text-center">5</span>
+          <button id="repsDonePlus" class="w-8 h-8 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="plus" style="width:13px;height:13px"></i></button>
+        </div>
+
+        <div class="flex gap-2 mt-4">
+          <button id="liveSkip" class="flex-1 h-11 rounded-xl bg-surface2 border border-line text-sm font-medium flex items-center justify-center gap-2 press-scale">
+            <i data-lucide="skip-forward" style="width:15px;height:15px"></i> Weiter
+          </button>
+          <button id="livePause" class="flex-1 h-11 rounded-xl bg-surface2 border border-line text-sm font-medium flex items-center justify-center gap-2 press-scale">
+            <i data-lucide="pause" style="width:15px;height:15px"></i> Pause
+          </button>
+          <button id="liveStop" class="w-11 h-11 rounded-xl bg-surface2 border border-line flex items-center justify-center text-red-400 press-scale">
+            <i data-lucide="square" style="width:15px;height:15px"></i>
+          </button>
+        </div>
+
+        <div id="setsOverviewWrap" class="hidden mt-4 pt-4 border-t border-line">
+          <div id="setsOverview" class="grid grid-cols-4 gap-2"></div>
+        </div>
+      </div>
+
+      <!-- SUMMARY VIEW -->
+      <div id="summaryView" class="hidden text-center py-4">
+        <i data-lucide="check-circle-2" class="mx-auto mb-3 text-accent" style="width:34px;height:34px"></i>
+        <p class="font-display font-bold text-xl mb-1">Workout abgeschlossen!</p>
+        <p id="summaryText" class="text-sm text-muted mb-5">0 Klimmzüge · 0 Sätze</p>
+        <button id="newWorkoutBtn" class="press-scale w-full h-12 rounded-2xl bg-surface2 border border-line font-medium text-sm flex items-center justify-center gap-2">
+          <i data-lucide="rotate-ccw" style="width:15px;height:15px"></i> Neues Workout
+        </button>
+        <button id="backToHomeBtn" class="press-scale w-full h-12 rounded-2xl bg-transparent border border-line text-muted font-medium text-sm flex items-center justify-center gap-2 mt-2">
+          <i data-lucide="home" style="width:15px;height:15px"></i> Zurück zum Startbildschirm
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- TAB PANEL: SOLO -->
+  <div id="tabPanel-solo" class="tab-panel hidden">
+    <section class="rounded-3xl bg-surface border border-line p-5 mb-4">
+      <p class="text-[11px] uppercase tracking-widest text-muted mb-3">Einzelnen Satz eintragen</p>
+      <div class="flex items-center gap-3">
+        <button id="repsMinus" class="w-12 h-12 shrink-0 rounded-xl bg-surface2 border border-line flex items-center justify-center press-scale">
+          <i data-lucide="minus" style="width:18px;height:18px"></i>
+        </button>
+        <input id="repsInput" type="number" inputmode="numeric" min="0" value="8"
+          class="w-full h-14 text-center font-display font-bold text-4xl tabular bg-transparent focus:outline-none">
+        <button id="repsPlus" class="w-12 h-12 shrink-0 rounded-xl bg-surface2 border border-line flex items-center justify-center press-scale">
+          <i data-lucide="plus" style="width:18px;height:18px"></i>
+        </button>
+      </div>
+      <div class="mt-4">
+        <p class="text-xs text-muted mb-1.5">Grifftyp</p>
+        <div id="soloGripSelect" class="grid grid-cols-4 gap-2">
+          <button class="seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-[11px] font-medium" data-grip="Obergriff">Obergriff</button>
+          <button class="seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-[11px] font-medium" data-grip="Untergriff">Untergriff</button>
+          <button class="seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-[11px] font-medium" data-grip="Hammergriff">Hammergriff</button>
+          <button class="seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-[11px] font-medium" data-grip="Scapula">Scapula</button>
+        </div>
+      </div>
+
+      <button id="addSetBtn" class="press-scale w-full h-14 mt-4 rounded-2xl bg-accent text-bg font-display font-bold text-base flex items-center justify-center gap-2 shadow-glow">
+        <i data-lucide="plus-circle" style="width:19px;height:19px"></i>
+        Satz hinzufügen
+      </button>
+    </section>
+  </div>
+
+  <!-- TAB PANEL: VERLAUF -->
+  <div id="tabPanel-verlauf" class="tab-panel hidden">
+    <section class="rounded-3xl bg-surface border border-line p-5 mb-4 relative overflow-hidden">
+      <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-accent/10 blur-3xl pointer-events-none"></div>
+
+      <div id="statsTabs" class="flex gap-1 mb-4 bg-surface2 border border-line rounded-xl p-1 text-xs font-medium">
+        <button class="tab-btn flex-1 py-1.5 rounded-lg press-scale" data-period="day">Tag</button>
+        <button class="tab-btn flex-1 py-1.5 rounded-lg press-scale" data-period="week">Woche</button>
+        <button class="tab-btn flex-1 py-1.5 rounded-lg press-scale" data-period="month">Monat</button>
+        <button class="tab-btn flex-1 py-1.5 rounded-lg press-scale" data-period="year">Jahr</button>
+        <button class="tab-btn flex-1 py-1.5 rounded-lg press-scale" data-period="all">Gesamt</button>
+      </div>
+
+      <p id="statsLabel" class="text-[11px] uppercase tracking-widest text-muted mb-1">Heute geschafft</p>
+      <div class="flex items-end gap-3">
+        <span id="periodTotal" class="font-display font-bold text-6xl tabular leading-none text-accent">0</span>
+        <span class="text-sm text-muted mb-1.5">Klimmzüge</span>
+      </div>
+      <div class="flex items-center gap-4 mt-3 text-xs text-muted flex-wrap">
+        <span id="periodSets" class="flex items-center gap-1.5"><i data-lucide="list-checks" style="width:13px;height:13px"></i> 0 Sätze</span>
+        <span id="periodAvg" class="flex items-center gap-1.5"><i data-lucide="trending-up" style="width:13px;height:13px"></i> Ø 0</span>
+        <span id="periodBest" class="flex items-center gap-1.5"><i data-lucide="flame" style="width:13px;height:13px"></i> Best 0</span>
+      </div>
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-[11px] uppercase tracking-widest text-muted">Verlauf</p>
+        <button id="clearAllBtn" class="text-[11px] text-muted flex items-center gap-1 press-scale">
+          <i data-lucide="trash-2" style="width:12px;height:12px"></i> Alles löschen
+        </button>
+      </div>
+      <div id="historyList" class="space-y-5"></div>
+      <div id="emptyState" class="hidden text-center py-14 text-muted">
+        <i data-lucide="inbox" class="mx-auto mb-3" style="width:28px;height:28px"></i>
+        <p class="text-sm">Noch keine Sätze eingetragen.</p>
+        <p class="text-xs mt-1">Starte ein Workout oder trag einen Satz ein.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- TAB PANEL: SETTINGS -->
+  <div id="tabPanel-settings" class="tab-panel hidden">
+    <section class="rounded-3xl bg-surface border border-line p-5 mb-4">
+      <h2 class="font-display font-bold text-lg mb-1">Einstellungen</h2>
+      <p class="text-xs text-muted">Alles wird lokal auf diesem Gerät gespeichert.</p>
+
+      <div class="py-3 border-t border-line mt-2">
+        <p class="text-sm mb-2">Design</p>
+        <div id="themeSelect" class="grid grid-cols-2 gap-2">
+          <button class="theme-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium flex items-center justify-center gap-1.5" data-theme-choice="dark">
+            <i data-lucide="moon" style="width:13px;height:13px"></i> Dark
+          </button>
+          <button class="theme-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium flex items-center justify-center gap-1.5" data-theme-choice="light">
+            <i data-lucide="sun" style="width:13px;height:13px"></i> Light
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between py-3 border-t border-line">
+        <div>
+          <p class="text-sm">Allzeit-Counter</p>
+          <p class="text-xs text-muted">Klappzähler oben im Header anzeigen</p>
+        </div>
+        <button id="toggleCounter" class="w-12 h-7 rounded-full bg-surface2 border border-line relative press-scale shrink-0 ml-3">
+          <span id="toggleCounterDot" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-muted transition-all"></span>
+        </button>
+      </div>
+
+      <div class="py-3 border-t border-line">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm">Hintergrundmusik</p>
+            <p class="text-xs text-muted">Loop aus <span class="tabular">pull.mp3</span> während der Session</p>
+          </div>
+          <button id="toggleSong" class="w-12 h-7 rounded-full bg-surface2 border border-line relative press-scale shrink-0 ml-3">
+            <span id="toggleSongDot" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-muted transition-all"></span>
+          </button>
+        </div>
+        <div class="flex items-center justify-between gap-3 mt-3">
+          <span class="text-xs text-muted flex items-center gap-1.5"><i data-lucide="volume-2" style="width:13px;height:13px"></i> Lautstärke</span>
+          <span id="songVolumeLabel" class="text-xs text-muted tabular">70%</span>
+        </div>
+        <input id="songVolume" type="range" min="0" max="100" value="70" class="w-full mt-2">
+      </div>
+
+      <div class="py-3 border-t border-line">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm">Ton pro Wiederholung</p>
+            <p class="text-xs text-muted">Metronom-Klick im Takt des Tempos</p>
+          </div>
+          <button id="toggleRepSound" class="w-12 h-7 rounded-full bg-surface2 border border-line relative press-scale shrink-0 ml-3">
+            <span id="toggleRepSoundDot" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-muted transition-all"></span>
+          </button>
+        </div>
+        <div id="toneOptions" class="grid grid-cols-3 gap-2 mt-3">
+          <button class="tone-btn seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium" data-tone="1">Ton 1</button>
+          <button class="tone-btn seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium" data-tone="2">Ton 2</button>
+          <button class="tone-btn seg-btn press-scale border border-line bg-surface2 rounded-xl py-2 text-xs font-medium" data-tone="3">Ton 3</button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between py-3 border-t border-line">
+        <div>
+          <p class="text-sm">Sound bei Pausenende</p>
+          <p class="text-xs text-muted">Signal wenn die Pause vorbei ist</p>
+        </div>
+        <button id="toggleSound" class="w-12 h-7 rounded-full bg-surface2 border border-line relative press-scale shrink-0 ml-3">
+          <span id="toggleSoundDot" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-muted transition-all"></span>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between py-3 border-t border-line">
+        <div>
+          <p class="text-sm">Vibration</p>
+          <p class="text-xs text-muted">Bei jedem Takt &amp; Pausenende</p>
+        </div>
+        <button id="toggleVibration" class="w-12 h-7 rounded-full bg-surface2 border border-line relative press-scale shrink-0 ml-3">
+          <span id="toggleVibrationDot" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-muted transition-all"></span>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between py-3 border-t border-line">
+        <div>
+          <p class="text-sm">Auto-Pause nach Eintrag</p>
+          <p class="text-xs text-muted">Startet Pausentimer nach manuellem Satz</p>
+        </div>
+        <button id="toggleAutostart" class="w-12 h-7 rounded-full bg-surface2 border border-line relative press-scale shrink-0 ml-3">
+          <span id="toggleAutostartDot" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-muted transition-all"></span>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between py-3 border-t border-line">
+        <div>
+          <p class="text-sm">Countdown vor jedem Satz</p>
+          <p class="text-xs text-muted">Großer Rückwärtszähler bevor es losgeht</p>
+        </div>
+        <button id="toggleCountdown" class="w-12 h-7 rounded-full bg-surface2 border border-line relative press-scale shrink-0 ml-3">
+          <span id="toggleCountdownDot" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-muted transition-all"></span>
+        </button>
+      </div>
+      <div id="countdownSecRow" class="flex items-center justify-between py-3 border-t border-line">
+        <span class="text-sm">Countdown-Dauer</span>
+        <div class="flex items-center gap-1.5">
+          <button id="countdownSecMinus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="minus" style="width:13px;height:13px"></i></button>
+          <span id="countdownSecLabel" class="text-sm w-10 text-center tabular">5s</span>
+          <button id="countdownSecPlus" class="w-7 h-7 rounded-lg bg-surface2 border border-line flex items-center justify-center press-scale"><i data-lucide="plus" style="width:13px;height:13px"></i></button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<!-- BOTTOM DOCK: Nav -->
+<div id="bottomDock" class="fixed bottom-0 inset-x-0 z-30 bg-surface">
+  <nav class="border-t border-line" style="padding-bottom: env(safe-area-inset-bottom)">
+    <div class="max-w-md mx-auto grid grid-cols-4">
+      <button data-tab="workout" class="nav-btn active flex flex-col items-center gap-1 py-2.5 press-scale">
+        <i data-lucide="dumbbell" style="width:19px;height:19px"></i>
+        <span class="text-[10px] font-medium">Workout</span>
+      </button>
+      <button data-tab="solo" class="nav-btn flex flex-col items-center gap-1 py-2.5 press-scale">
+        <i data-lucide="plus-circle" style="width:19px;height:19px"></i>
+        <span class="text-[10px] font-medium">Solo</span>
+      </button>
+      <button data-tab="verlauf" class="nav-btn flex flex-col items-center gap-1 py-2.5 press-scale">
+        <i data-lucide="calendar-days" style="width:19px;height:19px"></i>
+        <span class="text-[10px] font-medium">Verlauf</span>
+      </button>
+      <button data-tab="settings" class="nav-btn flex flex-col items-center gap-1 py-2.5 press-scale">
+        <i data-lucide="settings-2" style="width:19px;height:19px"></i>
+        <span class="text-[10px] font-medium">Settings</span>
+      </button>
+    </div>
+  </nav>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 bg-surface2 border border-line text-sm px-4 py-2.5 rounded-xl z-50 shadow-lg max-w-[90vw] text-center"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ================= Storage keys =================
+  const KEY_SETS = 'pullup_tracker_sets_v2';
+  const KEY_SETTINGS = 'pullup_tracker_settings_v2';
+  const KEY_WORKOUT = 'pullup_workout_config_v2';
+
+  const RING_CIRCUMFERENCE = 439.8;
+  const GRIP_LABELS = { Obergriff: 'OG', Untergriff: 'UG', Hammergriff: 'HG', Scapula: 'SC' };
+
+  // ================= State =================
+  let sets = loadSets();
+  let settings = loadSettings();
+  let cfg = loadWorkoutConfig();
+  let currentPeriod = 'day';
+
+  let audioCtx = null;
+  const bgSong = document.getElementById('bgSong');
+
+  // engine state for both guided workout & standalone rest
+  let engine = {
+    active: false,
+    standalone: false,     // true = simple rest after manual add (not a full workout)
+    paused: false,
+    phase: null,           // 'work' | 'rest'
+    setIndex: 0,
+    phaseElapsedMs: 0,
+    phaseDurationMs: 0,
+    lastTickIndex: -1,
+    repsDone: 0,
+    loggedThisWorkout: [],
+    interval: null,
+    workoutId: null,
+  };
+
+  // ================= Persistence =================
+  function loadSets() {
+    try { const raw = localStorage.getItem(KEY_SETS); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  function saveSets() { localStorage.setItem(KEY_SETS, JSON.stringify(sets)); }
+
+  function loadSettings() {
+    const defaults = { sound: true, vibration: true, autostart: true, song: false, songVolume: 0.7, repSound: false, repTone: 1, theme: 'light', counterEnabled: true, soloGrip: 'Obergriff', countdownEnabled: true, countdownSeconds: 5 };
+    try {
+      const raw = localStorage.getItem(KEY_SETTINGS);
+      return raw ? Object.assign(defaults, JSON.parse(raw)) : defaults;
+    } catch (e) { return defaults; }
+  }
+  function saveSettings() { localStorage.setItem(KEY_SETTINGS, JSON.stringify(settings)); }
+
+  function loadWorkoutConfig() {
+    const defaults = { numSets: 7, startReps: 5, schemeType: 'standard', scheme: generateScheme(7, 5, 'standard'), rest: 90, tempo: 2.0, grip: 'Obergriff' };
+    try {
+      const raw = localStorage.getItem(KEY_WORKOUT);
+      if (!raw) return defaults;
+      const parsed = JSON.parse(raw);
+      const merged = Object.assign({}, defaults, parsed);
+      if (!Array.isArray(merged.scheme) || merged.scheme.length !== merged.numSets) {
+        merged.scheme = generateScheme(merged.numSets, merged.startReps, merged.schemeType);
+      }
+      return merged;
+    } catch (e) { return defaults; }
+  }
+  function saveWorkoutConfig() { localStorage.setItem(KEY_WORKOUT, JSON.stringify(cfg)); }
+
+  // ================= Scheme generator =================
+  // Groups of 3 sets, decreasing target reps by 1 each group (e.g. 5-5-5-4-4-4-3)
+  function generateScheme(numSets, startReps, type) {
+    type = type || 'standard';
+    if (type === 'same') {
+      return Array(numSets).fill(startReps);
+    }
+    if (type === 'pyramide') {
+      const arr = [];
+      const c = Math.floor((numSets - 1) / 2);
+      for (let i = 0; i < numSets; i++) {
+        arr.push(Math.max(1, startReps + (c - Math.abs(i - c))));
+      }
+      return arr;
+    }
+    if (type === 'absteigend') {
+      const arr = [];
+      for (let i = 0; i < numSets; i++) {
+        arr.push(Math.max(1, startReps - i));
+      }
+      return arr;
+    }
+    // standard
+    const arr = [];
+    let reps = startReps;
+    while (arr.length < numSets) {
+      for (let i = 0; i < 3 && arr.length < numSets; i++) arr.push(reps);
+      reps = Math.max(1, reps - 1);
+    }
+    return arr;
+  }
+
+  // ================= Helpers =================
+  function todayKey(d) {
+    const dt = d ? new Date(d) : new Date();
+    return dt.getFullYear() + '-' + (dt.getMonth()+1).toString().padStart(2,'0') + '-' + dt.getDate().toString().padStart(2,'0');
+  }
+  function formatDateLabel(key) {
+    const today = todayKey();
+    const yesterday = todayKey(Date.now() - 86400000);
+    if (key === today) return 'Heute';
+    if (key === yesterday) return 'Gestern';
+    const [y,m,d] = key.split('-').map(Number);
+    return new Date(y, m-1, d).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'short' });
+  }
+  function formatTime(ts) { return new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => el.classList.add('hidden'), 2200);
+  }
+  function vibrate(pattern) {
+    if (settings.vibration && navigator.vibrate) { try { navigator.vibrate(pattern); } catch(e){} }
+  }
+  function ensureAudio() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    connectSongToGraph();
+  }
+  let songGainNode = null;
+  let songSourceConnected = false;
+  function connectSongToGraph() {
+    if (songSourceConnected || !audioCtx) return;
+    try {
+      const source = audioCtx.createMediaElementSource(bgSong);
+      songGainNode = audioCtx.createGain();
+      songGainNode.gain.value = settings.songVolume;
+      source.connect(songGainNode).connect(audioCtx.destination);
+      songSourceConnected = true;
+      bgSong.volume = 1; // attenuation now handled by gainNode (works on iOS unlike element.volume)
+    } catch (e) { /* connecting failed (e.g. unsupported) – falls back to bgSong.volume */ }
+  }
+  function applySongVolume() {
+    if (songGainNode) songGainNode.gain.value = settings.songVolume;
+    else bgSong.volume = settings.songVolume;
+  }
+  function playBeep() {
+    if (!settings.sound) return;
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    for (let i = 0; i < 2; i++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, now + i*0.28);
+      gain.gain.exponentialRampToValueAtTime(0.25, now + i*0.28 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i*0.28 + 0.22);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now + i*0.28);
+      osc.stop(now + i*0.28 + 0.25);
+    }
+  }
+  function playTick() {
+    if (!settings.repSound) return;
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const tone = settings.repTone;
+    if (tone === 1) { osc.type = 'sine'; osc.frequency.value = 660; }
+    else if (tone === 2) { osc.type = 'square'; osc.frequency.value = 1100; }
+    else { osc.type = 'triangle'; osc.frequency.value = 220; }
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(tone === 2 ? 0.12 : 0.2, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + (tone === 3 ? 0.16 : 0.09));
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+  function playSong() {
+    if (!settings.song) return;
+    ensureAudio();
+    applySongVolume();
+    bgSong.play().catch(() => showToast('pull.mp3 nicht gefunden – Datei neben die index.html legen'));
+  }
+  function pauseSong() { bgSong.pause(); }
+
+  function fireTickDot() {
+    const dot = document.getElementById('tickDot');
+    dot.classList.remove('firing');
+    void dot.offsetWidth;
+    dot.classList.add('firing');
+  }
+
+  // ================= Theme =================
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#F3F7F4' : '#06090A');
+    document.querySelectorAll('#themeSelect .theme-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-theme-choice') === theme);
+    });
+    // SVG ring style refs to var() re-resolve automatically, but nudge live ring redraw if active
+    if (engine.active) updateLiveUI();
+  }
+  document.querySelectorAll('#themeSelect .theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      settings.theme = btn.getAttribute('data-theme-choice');
+      saveSettings();
+      applyTheme(settings.theme);
+    });
+  });
+
+  // ================= All-time split-flap counter =================
+  let flapDigits = []; // array of {tileEl, leafTop, leafBottom, staticTop, staticBottom, value}
+
+  function computeTotalReps() { return sets.reduce((a, s) => a + s.reps, 0); }
+
+  function buildFlapTile(digit) {
+    const tile = document.createElement('div');
+    tile.className = 'flap-tile';
+    tile.innerHTML = `
+      <div class="flap-half flap-top"><span class="num">${digit}</span></div>
+      <div class="flap-half flap-bottom"><span class="num">${digit}</span></div>
+      <div class="flap-leaf flap-leaf-top"><span class="num">${digit}</span></div>
+      <div class="flap-leaf flap-leaf-bottom"><span class="num">${digit}</span></div>
+      <div class="flap-groove"></div>
+    `;
+    return {
+      el: tile,
+      value: digit,
+      top: tile.querySelector('.flap-top .num'),
+      bottom: tile.querySelector('.flap-bottom .num'),
+      leafTop: tile.querySelector('.flap-leaf-top'),
+      leafBottom: tile.querySelector('.flap-leaf-bottom'),
+      leafTopNum: tile.querySelector('.flap-leaf-top .num'),
+      leafBottomNum: tile.querySelector('.flap-leaf-bottom .num'),
+    };
+  }
+
+  function renderFlapBoardInitial() {
+    const board = document.getElementById('flapBoard');
+    board.innerHTML = '';
+    flapDigits = [];
+    const total = computeTotalReps();
+    const digitsStr = String(total);
+    digitsStr.split('').forEach(d => {
+      const tile = buildFlapTile(d);
+      flapDigits.push(tile);
+      board.appendChild(tile.el);
+    });
+  }
+
+  function ensureDigitCount(count) {
+    const board = document.getElementById('flapBoard');
+    while (flapDigits.length < count) {
+      const tile = buildFlapTile('0');
+      tile.el.classList.add('flap-tile-new');
+      flapDigits.unshift(tile);
+      board.insertBefore(tile.el, board.firstChild);
+    }
+  }
+
+  function flipTileTo(tile, newDigit) {
+    if (tile.value === newDigit) return;
+    const oldDigit = tile.value;
+    tile.value = newDigit;
+    // prep: static top already becomes new digit (hidden behind leafTop which shows old digit)
+    tile.top.textContent = newDigit;
+    tile.leafTopNum.textContent = oldDigit;
+    tile.leafTop.style.transition = 'none';
+    tile.leafTop.style.transform = 'rotateX(0deg)';
+    void tile.leafTop.offsetWidth;
+    tile.leafTop.style.transition = '';
+    tile.leafBottomNum.textContent = newDigit;
+    tile.leafBottom.style.transition = 'none';
+    tile.leafBottom.style.transform = 'rotateX(90deg)';
+    void tile.leafBottom.offsetWidth;
+    tile.leafBottom.style.transition = '';
+
+    requestAnimationFrame(() => {
+      tile.leafTop.style.transform = 'rotateX(-90deg)';
+    });
+    setTimeout(() => {
+      tile.bottom.textContent = newDigit;
+      tile.leafBottom.style.transform = 'rotateX(0deg)';
+    }, 160);
+  }
+
+  function updateFlapBoard(total, animate) {
+    const digitsStr = String(total);
+    ensureDigitCount(digitsStr.length);
+    const pad = flapDigits.length - digitsStr.length;
+    for (let i = 0; i < flapDigits.length; i++) {
+      const newDigit = i < pad ? '0' : digitsStr[i - pad];
+      if (animate) flipTileTo(flapDigits[i], newDigit);
+      else {
+        flapDigits[i].value = newDigit;
+        flapDigits[i].top.textContent = newDigit;
+        flapDigits[i].bottom.textContent = newDigit;
+        flapDigits[i].leafTopNum.textContent = newDigit;
+        flapDigits[i].leafBottomNum.textContent = newDigit;
+        flapDigits[i].leafTop.style.transform = 'rotateX(0deg)';
+        flapDigits[i].leafBottom.style.transform = 'rotateX(0deg)';
+      }
+    }
+  }
+
+  let counterQueue = Promise.resolve();
+  function animateCounterBy(delta) {
+    if (delta <= 0) { updateFlapBoard(computeTotalReps(), false); return; }
+    counterQueue = counterQueue.then(() => new Promise(resolve => {
+      let remaining = delta;
+      let current = computeTotalReps() - delta;
+      const step = () => {
+        if (remaining <= 0) { resolve(); return; }
+        current++;
+        updateFlapBoard(current, true);
+        remaining--;
+        setTimeout(step, 130);
+      };
+      step();
+    }));
+  }
+
+  function refreshCounterVisibility() {
+    document.getElementById('allTimeCounterWrap').classList.toggle('hidden', !settings.counterEnabled);
+  }
+
+  // ================= Tab navigation =================
+  function updateFixedStartBtnVisibility() {
+    const isWorkoutTab = document.querySelector('.nav-btn.active')?.getAttribute('data-tab') === 'workout';
+    const isConfigView = !document.getElementById('configView').classList.contains('hidden');
+    const show = isWorkoutTab && isConfigView;
+    const btn = document.getElementById('startWorkoutBtn');
+    btn.classList.toggle('hidden', !show);
+    btn.classList.toggle('flex', show);
+    syncBodyPadding();
+  }
+  function syncBodyPadding() {
+    const dock = document.getElementById('bottomDock');
+    document.body.style.paddingBottom = (dock.offsetHeight + 16) + 'px';
+    const topBar = document.getElementById('topBar');
+    document.getElementById('mainContent').style.paddingTop = (topBar.offsetHeight + 20) + 'px';
+  }
+  window.addEventListener('resize', syncBodyPadding);
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tabPanel-' + tab));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === tab));
+    updateFixedStartBtnVisibility();
+  }
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+  });
+
+  // ================= Rendering =================
+  function render() { renderStats(); renderHistory(); lucide.createIcons(); }
+
+  function getPeriodStart(period) {
+    const now = new Date();
+    if (period === 'day') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    if (period === 'week') {
+      const day = (now.getDay() + 6) % 7; // Monday = 0
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate() - day).getTime();
+    }
+    if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    if (period === 'year') return new Date(now.getFullYear(), 0, 1).getTime();
+    return 0;
+  }
+  const PERIOD_LABELS = { day: 'Heute geschafft', week: 'Diese Woche', month: 'Diesen Monat', year: 'Dieses Jahr', all: 'Insgesamt' };
+
+  function renderStats() {
+    const start = getPeriodStart(currentPeriod);
+    const filtered = sets.filter(s => s.ts >= start);
+    const total = filtered.reduce((a,s) => a + s.reps, 0);
+    const count = filtered.length;
+    const avg = count ? Math.round(total / count) : 0;
+    const best = count ? Math.max(...filtered.map(s => s.reps)) : 0;
+
+    document.getElementById('statsLabel').textContent = PERIOD_LABELS[currentPeriod];
+    document.getElementById('periodTotal').textContent = total;
+    document.getElementById('periodSets').innerHTML = '<i data-lucide="list-checks" style="width:13px;height:13px"></i> ' + count + ' ' + (count === 1 ? 'Satz' : 'Sätze');
+    document.getElementById('periodAvg').innerHTML = '<i data-lucide="trending-up" style="width:13px;height:13px"></i> Ø ' + avg;
+    document.getElementById('periodBest').innerHTML = '<i data-lucide="flame" style="width:13px;height:13px"></i> Best ' + best;
+
+    document.querySelectorAll('#statsTabs .tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-period') === currentPeriod);
+    });
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    const empty = document.getElementById('emptyState');
+    list.innerHTML = '';
+
+    if (sets.length === 0) { empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+
+    const groups = {};
+    sets.forEach(s => { const k = todayKey(s.ts); (groups[k] = groups[k] || []).push(s); });
+    const dateKeys = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+
+    dateKeys.forEach(key => {
+      const groupSets = groups[key].slice().sort((a,b) => b.ts - a.ts);
+      const dayTotal = groupSets.reduce((a,s)=>a+s.reps,0);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'rise-in';
+      const header = document.createElement('div');
+      header.className = 'flex items-center justify-between mb-2 px-1';
+      header.innerHTML = `
+        <span class="text-sm font-medium">${formatDateLabel(key)}</span>
+        <span class="text-xs text-muted tabular">${dayTotal} Klimmzüge · ${groupSets.length} ${groupSets.length===1?'Satz':'Sätze'}</span>
+      `;
+      wrap.appendChild(header);
+
+      const card = document.createElement('div');
+      card.className = 'rounded-2xl bg-surface border border-line divide-y divide-line overflow-hidden';
+
+      const rows = groupIntoRows(groupSets);
+      rows.forEach(row => {
+        const el = document.createElement('div');
+        if (row.type === 'workout') {
+          const w = row.sets.slice().sort((a,b) => a.ts - b.ts);
+          const scheme = w.map(s => s.reps).join('-');
+          const total = w.reduce((a,s) => a + s.reps, 0);
+          const grip = w[0].grip;
+          const gripBadge = grip ? `<span class="text-[10px] px-1.5 py-0.5 rounded-md bg-surface2 border border-line text-muted">${GRIP_LABELS[grip] || grip}</span>` : '';
+          el.className = 'px-4 py-3';
+          el.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <i data-lucide="dumbbell" style="width:14px;height:14px" class="text-accent shrink-0"></i>
+                <span class="font-display font-bold text-base tabular truncate">${scheme}</span>
+              </div>
+              <button data-wid="${row.workoutId}" class="delete-workout w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-muted press-scale hover:text-red-400">
+                <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+              </button>
+            </div>
+            <div class="flex items-center gap-3 mt-1.5 text-xs text-muted">
+              <span>${total} gesamt · ${w.length} ${w.length===1?'Satz':'Sätze'}</span>
+              <span>${formatTime(w[0].ts)}</span>
+              ${gripBadge}
+            </div>
+          `;
+        } else {
+          const s = row.set;
+          const gripBadge = s.grip ? `<span class="text-[10px] px-1.5 py-0.5 rounded-md bg-surface2 border border-line text-muted">${GRIP_LABELS[s.grip] || s.grip}</span>` : '';
+          el.className = 'flex items-center justify-between px-4 py-3';
+          el.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="font-display font-bold text-xl tabular text-accent w-8">${s.reps}</span>
+              <span class="text-xs text-muted">${formatTime(s.ts)}</span>
+              ${gripBadge}
+            </div>
+            <button data-id="${s.id}" class="delete-set w-8 h-8 rounded-lg flex items-center justify-center text-muted press-scale hover:text-red-400">
+              <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+            </button>
+          `;
+        }
+        card.appendChild(el);
+      });
+
+      wrap.appendChild(card);
+      list.appendChild(wrap);
+    });
+
+    list.querySelectorAll('.delete-set').forEach(btn => btn.addEventListener('click', () => deleteSet(btn.getAttribute('data-id'))));
+    list.querySelectorAll('.delete-workout').forEach(btn => btn.addEventListener('click', () => deleteWorkout(btn.getAttribute('data-wid'))));
+  }
+
+  // Groups a date's sets into workout rows (sets sharing a workoutId) and single rows (manual sets)
+  function groupIntoRows(groupSets) {
+    const seen = {};
+    const rows = [];
+    groupSets.forEach(s => {
+      if (s.workoutId) {
+        if (!seen[s.workoutId]) {
+          seen[s.workoutId] = { type: 'workout', workoutId: s.workoutId, sets: [], ts: s.ts };
+          rows.push(seen[s.workoutId]);
+        }
+        seen[s.workoutId].sets.push(s);
+        if (s.ts > seen[s.workoutId].ts) seen[s.workoutId].ts = s.ts;
+      } else {
+        rows.push({ type: 'single', set: s, ts: s.ts });
+      }
+    });
+    rows.sort((a,b) => b.ts - a.ts);
+    return rows;
+  }
+
+  // ================= Set actions =================
+  function logSet(reps, grip, auto, workoutId) {
+    sets.push({ id: 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), reps, ts: Date.now(), grip: grip || cfg.grip, auto: !!auto, workoutId: workoutId || null });
+    saveSets();
+    render();
+    animateCounterBy(reps);
+  }
+  function deleteSet(id) { sets = sets.filter(s => s.id !== id); saveSets(); render(); updateFlapBoard(computeTotalReps(), false); }
+  function deleteWorkout(workoutId) {
+    if (!confirm('Dieses komplette Workout aus dem Verlauf löschen?')) return;
+    sets = sets.filter(s => s.workoutId !== workoutId);
+    saveSets(); render();
+    updateFlapBoard(computeTotalReps(), false);
+  }
+  function clearAll() {
+    if (sets.length === 0) return;
+    if (confirm('Wirklich den kompletten Verlauf löschen? Das kann nicht rückgängig gemacht werden.')) {
+      sets = []; saveSets(); render(); showToast('Verlauf gelöscht');
+      updateFlapBoard(0, false);
+    }
+  }
+  function getLastReps() { return sets.length ? sets[sets.length - 1].reps : 8; }
+
+  function adjustReps(delta) {
+    const input = document.getElementById('repsInput');
+    let v = Math.max(0, (parseInt(input.value, 10) || 0) + delta);
+    input.value = v;
+  }
+
+  // ================= Scheme chip UI =================
+  function renderSchemeChips() {
+    const row = document.getElementById('schemeChips');
+    row.innerHTML = '';
+    cfg.scheme.forEach((reps, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'flex flex-col items-center gap-1 bg-surface2 border border-line rounded-xl px-1 py-1.5';
+      chip.innerHTML = `
+        <span class="text-[9px] text-muted">Satz ${i+1}</span>
+        <div class="flex items-center gap-1">
+          <button data-i="${i}" class="chip-minus w-5 h-5 rounded bg-bg flex items-center justify-center text-muted press-scale"><i data-lucide="minus" style="width:10px;height:10px"></i></button>
+          <span class="font-display font-bold text-sm tabular w-4 text-center">${reps}</span>
+          <button data-i="${i}" class="chip-plus w-5 h-5 rounded bg-bg flex items-center justify-center text-muted press-scale"><i data-lucide="plus" style="width:10px;height:10px"></i></button>
+        </div>
+      `;
+      row.appendChild(chip);
+    });
+    row.querySelectorAll('.chip-minus').forEach(b => b.addEventListener('click', () => adjustSchemeValue(parseInt(b.getAttribute('data-i')), -1)));
+    row.querySelectorAll('.chip-plus').forEach(b => b.addEventListener('click', () => adjustSchemeValue(parseInt(b.getAttribute('data-i')), 1)));
+    lucide.createIcons();
+  }
+  function adjustSchemeValue(i, delta) {
+    cfg.scheme[i] = Math.max(1, Math.min(50, cfg.scheme[i] + delta));
+    saveWorkoutConfig();
+    renderSchemeChips();
+  }
+  function regenerateScheme() {
+    cfg.scheme = generateScheme(cfg.numSets, cfg.startReps, cfg.schemeType);
+    saveWorkoutConfig();
+    renderSchemeChips();
+  }
+
+  function refreshSchemeTypeUI() {
+    document.querySelectorAll('#schemeTypeSelect .seg-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-scheme-type') === cfg.schemeType));
+  }
+  document.querySelectorAll('#schemeTypeSelect .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cfg.schemeType = btn.getAttribute('data-scheme-type');
+      regenerateScheme();
+      refreshSchemeTypeUI();
+    });
+  });
+
+  // ================= Config UI bindings =================
+  function refreshConfigLabels() {
+    document.getElementById('numSetsLabel').textContent = cfg.numSets;
+    document.getElementById('startRepsLabel').textContent = cfg.startReps;
+    document.getElementById('restLabel').textContent = cfg.rest + 's';
+    document.getElementById('tempoLabel').textContent = cfg.tempo.toFixed(1) + 's';
+    document.querySelectorAll('#gripSelect .seg-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-grip') === cfg.grip));
+  }
+
+  document.getElementById('numSetsMinus').addEventListener('click', () => { cfg.numSets = Math.max(1, cfg.numSets - 1); saveWorkoutConfig(); regenerateScheme(); refreshConfigLabels(); });
+  document.getElementById('numSetsPlus').addEventListener('click', () => { cfg.numSets = Math.min(15, cfg.numSets + 1); saveWorkoutConfig(); regenerateScheme(); refreshConfigLabels(); });
+  document.getElementById('startRepsMinus').addEventListener('click', () => { cfg.startReps = Math.max(1, cfg.startReps - 1); saveWorkoutConfig(); regenerateScheme(); refreshConfigLabels(); });
+  document.getElementById('startRepsPlus').addEventListener('click', () => { cfg.startReps = Math.min(30, cfg.startReps + 1); saveWorkoutConfig(); regenerateScheme(); refreshConfigLabels(); });
+  document.getElementById('restMinus').addEventListener('click', () => { cfg.rest = Math.max(15, cfg.rest - 15); saveWorkoutConfig(); refreshConfigLabels(); });
+  document.getElementById('restPlus').addEventListener('click', () => { cfg.rest = Math.min(300, cfg.rest + 15); saveWorkoutConfig(); refreshConfigLabels(); });
+  document.getElementById('tempoMinus').addEventListener('click', () => { cfg.tempo = Math.max(0.5, Math.round((cfg.tempo - 0.5)*10)/10); saveWorkoutConfig(); refreshConfigLabels(); });
+  document.getElementById('tempoPlus').addEventListener('click', () => { cfg.tempo = Math.min(6, Math.round((cfg.tempo + 0.5)*10)/10); saveWorkoutConfig(); refreshConfigLabels(); });
+
+  document.querySelectorAll('#gripSelect .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => { cfg.grip = btn.getAttribute('data-grip'); saveWorkoutConfig(); refreshConfigLabels(); });
+  });
+
+  document.querySelectorAll('#statsTabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => { currentPeriod = btn.getAttribute('data-period'); renderStats(); });
+  });
+
+  // ================= Workout / rest engine =================
+  let autoHomeTimeout = null;
+  function goToStartScreen() {
+    clearTimeout(autoHomeTimeout);
+    autoHomeTimeout = null;
+    switchTab('workout');
+    showView('config');
+  }
+  function showView(view) {
+    document.getElementById('configView').classList.toggle('hidden', view !== 'config');
+    document.getElementById('liveView').classList.toggle('hidden', view !== 'live');
+    document.getElementById('summaryView').classList.toggle('hidden', view !== 'summary');
+    updateFixedStartBtnVisibility();
+    clearTimeout(autoHomeTimeout);
+    autoHomeTimeout = view === 'summary' ? setTimeout(goToStartScreen, 30000) : null;
+  }
+
+  function startWorkout() {
+    engine.active = true;
+    engine.standalone = false;
+    engine.paused = false;
+    engine.setIndex = 0;
+    engine.loggedThisWorkout = [];
+    engine.workoutId = 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    renderSetsOverviewGrid();
+    beginWorkPhase();
+    showView('live');
+    playSong();
+    startClock();
+  }
+
+  function startStandaloneRest() {
+    engine.active = true;
+    engine.standalone = true;
+    engine.paused = false;
+    engine.phase = 'rest';
+    engine.phaseElapsedMs = 0;
+    engine.phaseDurationMs = cfg.rest * 1000;
+    document.getElementById('setsOverviewWrap').classList.add('hidden');
+    showView('live');
+    document.getElementById('repsAdjustRow').classList.add('hidden');
+    document.getElementById('liveSetCounter').textContent = 'Manuelle Pause';
+    document.getElementById('liveSkip').classList.remove('hidden');
+    updateLiveUI();
+    playSong();
+    startClock();
+  }
+
+  function renderSetsOverviewGrid() {
+    const wrap = document.getElementById('setsOverviewWrap');
+    if (engine.standalone) { wrap.classList.add('hidden'); return; }
+    wrap.classList.remove('hidden');
+    const row = document.getElementById('setsOverview');
+    row.innerHTML = cfg.scheme.map((reps, i) =>
+      `<div class="set-chip rounded-lg border border-line bg-surface2 text-center py-2 text-xs font-display font-bold tabular" data-set-index="${i}">${reps}</div>`
+    ).join('');
+    updateSetsOverviewState();
+  }
+
+  function updateSetsOverviewState() {
+    if (engine.standalone) return;
+    const activeIndex = engine.phase === 'rest' ? engine.setIndex + 1 : engine.setIndex;
+    document.querySelectorAll('#setsOverview .set-chip').forEach((el, i) => {
+      const isDone = i < activeIndex;
+      const isActive = i === activeIndex;
+      el.classList.toggle('set-chip-done', isDone);
+      el.classList.toggle('set-chip-active', isActive);
+      el.classList.toggle('border-accent', isActive);
+      el.classList.toggle('text-accent', isActive);
+    });
+  }
+
+  function beginWorkPhase() {
+    if (!settings.countdownEnabled) { beginWorkPhaseActual(); return; }
+    engine.phase = 'countdown';
+    engine.phaseElapsedMs = 0;
+    engine.phaseDurationMs = settings.countdownSeconds * 1000;
+    engine.lastCountdownInt = settings.countdownSeconds;
+    document.getElementById('repsAdjustRow').classList.add('hidden');
+    document.getElementById('liveSkip').classList.remove('hidden');
+    updateSetsOverviewState();
+    updateLiveUI();
+  }
+
+  function beginWorkPhaseActual() {
+    engine.phase = 'work';
+    engine.phaseElapsedMs = 0;
+    engine.lastTickIndex = -1;
+    const target = cfg.scheme[engine.setIndex];
+    engine.phaseDurationMs = target * cfg.tempo * 1000;
+    engine.repsDone = target;
+    document.getElementById('repsAdjustRow').classList.remove('hidden');
+    document.getElementById('liveSkip').classList.remove('hidden');
+    updateLiveUI();
+  }
+
+  function beginRestPhase() {
+    engine.phase = 'rest';
+    engine.phaseElapsedMs = 0;
+    engine.phaseDurationMs = cfg.rest * 1000;
+    document.getElementById('repsAdjustRow').classList.add('hidden');
+    updateSetsOverviewState();
+    updateLiveUI();
+  }
+
+  function startClock() {
+    clearInterval(engine.interval);
+    engine.interval = setInterval(tick, 100);
+  }
+
+  function tick() {
+    if (!engine.active || engine.paused) return;
+    engine.phaseElapsedMs += 100;
+
+    if (engine.phase === 'countdown') {
+      const secLeft = Math.max(0, Math.ceil((engine.phaseDurationMs - engine.phaseElapsedMs) / 1000));
+      if (secLeft !== engine.lastCountdownInt) {
+        engine.lastCountdownInt = secLeft;
+        if (secLeft > 0) vibrate(15);
+      }
+      if (engine.phaseElapsedMs >= engine.phaseDurationMs) {
+        playBeep();
+        vibrate([60,40,60]);
+        beginWorkPhaseActual();
+        return;
+      }
+    } else if (engine.phase === 'work') {
+      const target = cfg.scheme[engine.setIndex];
+      const tickIdx = Math.min(target, Math.floor(engine.phaseElapsedMs / (cfg.tempo * 1000)));
+      if (tickIdx > engine.lastTickIndex && tickIdx > 0) {
+        engine.lastTickIndex = tickIdx;
+        playTick();
+        vibrate(20);
+        fireTickDot();
+      }
+      if (engine.phaseElapsedMs >= engine.phaseDurationMs) {
+        completeWorkPhase();
+        return;
+      }
+    } else if (engine.phase === 'rest') {
+      if (engine.phaseElapsedMs >= engine.phaseDurationMs) {
+        completeRestPhase();
+        return;
+      }
+    }
+    updateLiveUI();
+  }
+
+  function completeWorkPhase() {
+    logSet(engine.repsDone, cfg.grip, true, engine.workoutId);
+    engine.loggedThisWorkout.push(engine.repsDone);
+    if (engine.setIndex >= cfg.numSets - 1) { finishWorkout(); return; }
+    beginRestPhase();
+  }
+
+  function completeRestPhase() {
+    playBeep();
+    vibrate([100,60,100]);
+    if (engine.standalone) { finishStandalone(); return; }
+    engine.setIndex++;
+    beginWorkPhase();
+  }
+
+  function finishWorkout() {
+    clearInterval(engine.interval);
+    engine.active = false;
+    pauseSong();
+    const total = engine.loggedThisWorkout.reduce((a,b)=>a+b,0);
+    document.getElementById('summaryText').textContent = total + ' Klimmzüge · ' + engine.loggedThisWorkout.length + ' Sätze';
+    showView('summary');
+    showToast('Workout abgeschlossen 🎉');
+    vibrate([80,50,80,50,150]);
+  }
+
+  function finishStandalone() {
+    clearInterval(engine.interval);
+    engine.active = false;
+    pauseSong();
+    showView('config');
+  }
+
+  const SUB_LABEL_CLASS_SMALL = 'text-[10px] uppercase tracking-widest text-muted mt-1';
+  const SUB_LABEL_CLASS_BIG = 'text-xl font-display font-bold tabular text-muted mt-1';
+
+  function updateLiveUI() {
+    const ring = document.getElementById('liveRing');
+    const display = document.getElementById('liveDisplay');
+    const sub = document.getElementById('liveSubLabel');
+    const targetAbove = document.getElementById('liveTargetAbove');
+    const phaseLabel = document.getElementById('livePhaseLabel');
+    const setCounter = document.getElementById('liveSetCounter');
+    const progressBar = document.getElementById('workoutProgressBar');
+    const repsDoneLabel = document.getElementById('repsDoneLabel');
+
+    const remainingMs = Math.max(0, engine.phaseDurationMs - engine.phaseElapsedMs);
+    const remainingSec = Math.ceil(remainingMs / 1000);
+    const progress = engine.phaseDurationMs ? engine.phaseElapsedMs / engine.phaseDurationMs : 0;
+    ring.setAttribute('stroke-dashoffset', (RING_CIRCUMFERENCE * (1 - Math.min(1,progress))).toFixed(1));
+
+    if (engine.phase === 'countdown') {
+      ring.style.stroke = 'var(--color-accent2)';
+      const secLeft = Math.max(1, Math.ceil(remainingMs / 1000));
+      display.textContent = secLeft;
+      display.classList.add('text-7xl');
+      display.classList.remove('text-4xl');
+      sub.classList.add('hidden');
+      targetAbove.classList.remove('hidden');
+      targetAbove.textContent = 'Ziel: ' + cfg.scheme[engine.setIndex] + ' Wiederholungen';
+      phaseLabel.textContent = 'Gleich geht\'s los';
+      setCounter.textContent = 'Satz ' + (engine.setIndex + 1) + '/' + cfg.numSets;
+    } else if (engine.phase === 'work') {
+      display.classList.remove('text-7xl');
+      display.classList.add('text-4xl');
+      ring.style.stroke = 'var(--color-accent)';
+      display.textContent = remainingSec;
+      const target = cfg.scheme[engine.setIndex];
+      const tickIdx = Math.min(target, Math.floor(engine.phaseElapsedMs / (cfg.tempo * 1000)));
+      targetAbove.classList.add('hidden');
+      sub.classList.remove('hidden');
+      sub.className = SUB_LABEL_CLASS_BIG;
+      sub.textContent = tickIdx + '/' + target;
+      phaseLabel.textContent = 'Satz läuft';
+      if (!engine.standalone) setCounter.textContent = 'Satz ' + (engine.setIndex + 1) + '/' + cfg.numSets;
+      repsDoneLabel.textContent = engine.repsDone;
+    } else {
+      display.classList.remove('text-7xl');
+      display.classList.add('text-4xl');
+      ring.style.stroke = 'var(--color-accent2)';
+      display.textContent = remainingSec;
+      phaseLabel.textContent = 'Pause';
+      targetAbove.classList.add('hidden');
+      sub.classList.remove('hidden');
+      sub.className = SUB_LABEL_CLASS_SMALL;
+      if (engine.standalone) {
+        sub.textContent = 'Erholung';
+      } else {
+        const nextTarget = cfg.scheme[engine.setIndex + 1];
+        sub.textContent = 'Nächster: ' + nextTarget;
+        setCounter.textContent = 'Satz ' + (engine.setIndex + 1) + '/' + cfg.numSets;
+      }
+    }
+
+    if (!engine.standalone) {
+      const doneFraction = (engine.setIndex + (engine.phase === 'countdown' ? 0 : progress)) / cfg.numSets;
+      progressBar.style.width = (Math.min(1,doneFraction) * 100) + '%';
+    }
+
+    document.getElementById('livePause').innerHTML = engine.paused
+      ? '<i data-lucide="play" style="width:15px;height:15px"></i> Weiter'
+      : '<i data-lucide="pause" style="width:15px;height:15px"></i> Pause';
+    lucide.createIcons();
+  }
+
+  document.getElementById('startWorkoutBtn').addEventListener('click', () => { ensureAudio(); startWorkout(); });
+  document.getElementById('newWorkoutBtn').addEventListener('click', () => showView('config'));
+  document.getElementById('backToHomeBtn').addEventListener('click', goToStartScreen);
+
+  document.getElementById('livePause').addEventListener('click', () => {
+    engine.paused = !engine.paused;
+    if (engine.paused) pauseSong(); else playSong();
+    updateLiveUI();
+  });
+  document.getElementById('liveSkip').addEventListener('click', () => { engine.phaseElapsedMs = engine.phaseDurationMs; });
+  document.getElementById('liveStop').addEventListener('click', () => {
+    if (!confirm('Session wirklich abbrechen?')) return;
+    clearInterval(engine.interval);
+    engine.active = false;
+    pauseSong();
+    showView('config');
+  });
+  document.getElementById('repsDoneMinus').addEventListener('click', () => { engine.repsDone = Math.max(0, engine.repsDone - 1); updateLiveUI(); });
+  document.getElementById('repsDonePlus').addEventListener('click', () => { engine.repsDone = engine.repsDone + 1; updateLiveUI(); });
+
+  // ================= Quick add =================
+  document.getElementById('addSetBtn').addEventListener('click', () => {
+    ensureAudio();
+    const input = document.getElementById('repsInput');
+    const reps = parseInt(input.value, 10);
+    if (isNaN(reps) || reps <= 0) { showToast('Bitte gültige Wiederholungen eingeben'); return; }
+    logSet(reps, settings.soloGrip, false);
+    showToast(reps + ' Wiederholungen eingetragen 💪');
+    vibrate(15);
+    if (settings.autostart && !engine.active) startStandaloneRest();
+  });
+  document.getElementById('repsMinus').addEventListener('click', () => adjustReps(-1));
+  document.getElementById('repsPlus').addEventListener('click', () => adjustReps(1));
+  document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+
+  function refreshSoloGripUI() {
+    document.querySelectorAll('#soloGripSelect .seg-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-grip') === settings.soloGrip));
+  }
+  document.querySelectorAll('#soloGripSelect .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      settings.soloGrip = btn.getAttribute('data-grip');
+      saveSettings();
+      refreshSoloGripUI();
+    });
+  });
+
+  // ================= Settings =================
+  function refreshToggle(key, dotId, btn) {
+    const dot = document.getElementById(dotId);
+    if (settings[key]) {
+      btn.classList.add('bg-accent/20', 'border-accent');
+      dot.classList.remove('bg-muted'); dot.classList.add('bg-accent', 'translate-x-5');
+    } else {
+      btn.classList.remove('bg-accent/20', 'border-accent');
+      dot.classList.add('bg-muted'); dot.classList.remove('bg-accent', 'translate-x-5');
+    }
+  }
+  function initToggles() {
+    [['sound','toggleSoundDot','toggleSound'], ['vibration','toggleVibrationDot','toggleVibration'],
+     ['autostart','toggleAutostartDot','toggleAutostart'], ['song','toggleSongDot','toggleSong'],
+     ['repSound','toggleRepSoundDot','toggleRepSound'], ['counterEnabled','toggleCounterDot','toggleCounter'],
+     ['countdownEnabled','toggleCountdownDot','toggleCountdown']].forEach(([key, dotId, btnId]) => {
+      const btn = document.getElementById(btnId);
+      refreshToggle(key, dotId, btn);
+      btn.addEventListener('click', () => {
+        settings[key] = !settings[key];
+        saveSettings();
+        refreshToggle(key, dotId, btn);
+        if (key === 'song') { if (settings.song && engine.active && !engine.paused) playSong(); else pauseSong(); }
+        if (key === 'counterEnabled') refreshCounterVisibility();
+        if (key === 'countdownEnabled') document.getElementById('countdownSecRow').classList.toggle('opacity-40', !settings.countdownEnabled);
+        document.getElementById('toneOptions').classList.toggle('opacity-40', !settings.repSound);
+      });
+    });
+    document.getElementById('toneOptions').classList.toggle('opacity-40', !settings.repSound);
+  }
+  function refreshCountdownLabel() {
+    document.getElementById('countdownSecLabel').textContent = settings.countdownSeconds + 's';
+  }
+  document.getElementById('countdownSecMinus').addEventListener('click', () => {
+    settings.countdownSeconds = Math.max(2, settings.countdownSeconds - 1);
+    saveSettings();
+    refreshCountdownLabel();
+  });
+  document.getElementById('countdownSecPlus').addEventListener('click', () => {
+    settings.countdownSeconds = Math.min(15, settings.countdownSeconds + 1);
+    saveSettings();
+    refreshCountdownLabel();
+  });
+
+  function refreshToneButtons() {
+    document.querySelectorAll('.tone-btn').forEach(b => b.classList.toggle('active', parseInt(b.getAttribute('data-tone')) === settings.repTone));
+  }
+  document.querySelectorAll('.tone-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      settings.repTone = parseInt(btn.getAttribute('data-tone'));
+      saveSettings();
+      refreshToneButtons();
+      ensureAudio(); playTick();
+    });
+  });
+
+  const songVolumeSlider = document.getElementById('songVolume');
+  const songVolumeLabel = document.getElementById('songVolumeLabel');
+  songVolumeSlider.addEventListener('input', () => {
+    const v = parseInt(songVolumeSlider.value, 10);
+    settings.songVolume = v / 100;
+    songVolumeLabel.textContent = v + '%';
+    applySongVolume();
+    saveSettings();
+  });
+
+  // ================= Init =================
+  function init() {
+    applyTheme(settings.theme);
+    document.getElementById('repsInput').value = getLastReps();
+    refreshConfigLabels();
+    refreshSchemeTypeUI();
+    renderSchemeChips();
+    initToggles();
+    refreshToneButtons();
+    refreshSoloGripUI();
+    refreshCountdownLabel();
+    document.getElementById('countdownSecRow').classList.toggle('opacity-40', !settings.countdownEnabled);
+    renderFlapBoardInitial();
+    refreshCounterVisibility();
+    songVolumeSlider.value = Math.round(settings.songVolume * 100);
+    songVolumeLabel.textContent = Math.round(settings.songVolume * 100) + '%';
+    bgSong.volume = 1;
+    updateFixedStartBtnVisibility();
+    render();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
