@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pull-Up Master & Tracker</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        neon: '#39ff14',
+                        neonDark: '#2ce00c',
+                        darkBg: '#090d16', /* Tieferes, edles Anthrazit/Schwarz */
+                        cardBg: '#131b2e', /* Slate 900 Abwandlung */
+                        cardBorder: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            overscroll-behavior-y: contain;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Progressbar Smoothness */
+        .progress-smooth {
+            transition: width 0.1s linear;
+        }
+        /* Versteckt Scrollbars */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-slate-100 font-sans min-h-screen pb-28">
+
+    <audio id="bg-music" src="pull.mp3" loop></audio>
+
+    <div class="max-w-md mx-auto p-4">
+        
+        <header class="flex justify-between items-center mb-6 pt-2">
+            <div>
+                <h1 class="text-xl font-black tracking-wider text-white flex items-center gap-2 uppercase">
+                    <span class="text-neon">PULL-UP</span> PRO
+                </h1>
+                <p class="text-xs text-slate-400" id="current-date-display"></p>
+            </div>
+            <div class="bg-cardBg px-3 py-1.5 rounded-xl border border-cardBorder text-right">
+                <span class="block text-[10px] text-slate-400 uppercase tracking-wider font-bold">Heute Gesamt</span>
+                <span class="text-xl font-black text-neon" id="header-daily-total">0</span> <span class="text-xs text-slate-400">Reps</span>
+            </div>
+        </header>
+
+        <div id="view-routine" class="view-content space-y-4">
+            
+            <div id="routine-setup-card" class="bg-cardBg rounded-2xl p-5 border border-cardBorder shadow-xl space-y-4">
+                <h2 class="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-cardBorder pb-2">
+                    <i data-lucide="play-circle" class="text-neon w-5 h-5"></i> Routine Konfigurieren
+                </h2>
+
+                <div>
+                    <label class="block text-xs text-slate-400 font-bold uppercase mb-2">Griffart</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
+                        <button onclick="setGrip('Obergriff')" id="grip-Obergriff" class="grip-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Obergriff</button>
+                        <button onclick="setGrip('Untergriff')" id="grip-Untergriff" class="grip-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Untergriff</button>
+                        <button onclick="setGrip('Hammergriff')" id="grip-Hammergriff" class="grip-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Hammergriff</button>
+                        <button onclick="setGrip('Scapula')" id="grip-Scapula" class="grip-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Scapula</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 font-bold uppercase mb-1">Satz-Schema (Kommasortiert)</label>
+                    <input type="text" id="routine-sequence-input" value="5,5,5,4,4,4,3" 
+                        class="w-full bg-darkBg text-white px-4 py-3 rounded-xl border border-slate-700 focus:border-neon focus:outline-none text-center font-mono text-lg font-bold tracking-widest">
+                    <div class="flex justify-between gap-1 mt-1.5">
+                        <button onclick="applyPreset('5,5,5,4,4,4,3')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Standard</button>
+                        <button onclick="applyPreset('5,5,5,5,5')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">5x5</button>
+                        <button onclick="applyPreset('1,2,3,4,5,4,3,2,1')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Pyramide</button>
+                        <button onclick="applyPreset('8,7,6,5,4')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">Absteigend</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 font-bold uppercase mb-1">Pause (Sekunden)</label>
+                        <div class="flex items-center bg-darkBg rounded-xl border border-slate-700 px-2">
+                            <button onclick="adjustRest(-10)" class="p-2 text-slate-400 hover:text-white font-bold">-10</button>
+                            <input type="number" id="routine-rest-input" value="90" min="10" max="600" step="5"
+                                class="w-full bg-transparent text-center font-bold text-white focus:outline-none">
+                            <button onclick="adjustRest(10)" class="p-2 text-slate-400 hover:text-white font-bold">+10</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 font-bold uppercase mb-1">Tempo (pro Rep)</label>
+                        <div class="flex items-center bg-darkBg rounded-xl border border-slate-700 px-2">
+                            <button onclick="adjustTempo(-0.5)" class="p-2 text-slate-400 hover:text-white font-bold">-0.5</button>
+                            <span id="routine-tempo-display" class="w-full text-center font-bold text-white font-mono">2.0s</span>
+                            <button onclick="adjustTempo(0.5)" class="p-2 text-slate-400 hover:text-white font-bold">+0.5</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-start-routine" class="w-full bg-neon hover:bg-neonDark text-darkBg font-black text-lg py-4 rounded-xl shadow-[0_0_20px_rgba(57,255,20,0.3)] active:scale-95 transition flex justify-center items-center gap-2 uppercase tracking-wide mt-2">
+                    <i data-lucide="play"></i> Workout Starten
+                </button>
+            </div>
+
+            <div id="routine-active-card" class="bg-cardBg rounded-2xl p-6 border border-cardBorder shadow-2xl space-y-6 hidden relative overflow-hidden">
+                <div id="workout-glow" class="absolute -top-12 -left-12 w-32 h-32 bg-neon/10 rounded-full blur-2xl pointer-events-none transition-all duration-300"></div>
+
+                <div class="flex justify-between items-center border-b border-cardBorder pb-3 relative z-10">
+                    <div>
+                        <span class="text-xs font-bold text-neon uppercase tracking-widest" id="active-grip-badge">OBERGRIFF</span>
+                        <h3 class="text-lg font-black text-white" id="active-set-title">SATZ 1 VON 5</h3>
+                    </div>
+                    <span class="text-xs font-mono bg-slate-800 text-slate-300 px-3 py-1 rounded-full border border-slate-700" id="active-sequence-preview">5 - 5 - 5 - 4 - 4</span>
+                </div>
+
+                <div class="flex flex-col items-center justify-center py-6 relative z-10">
+                    <div id="active-phase-label" class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Vorbereitung</div>
+                    
+                    <div id="active-main-display" class="text-7xl font-black font-mono tracking-tighter text-white my-2">
+                        3
+                    </div>
+                    
+                    <div id="active-sub-label" class="text-sm font-semibold text-neon font-mono h-5">Bereitmachen!</div>
+                </div>
+
+                <div class="space-y-2 relative z-10">
+                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+                        <div id="active-progress-bar" class="bg-neon h-full w-0 progress-smooth"></div>
+                    </div>
+                    <div class="flex justify-between text-[11px] text-slate-400 font-medium">
+                        <span id="active-progress-left">Fortschritt</span>
+                        <span id="active-progress-right">0%</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 relative z-10">
+                    <button id="btn-skip-phase" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition">
+                        Pause überspringen
+                    </button>
+                    <button id="btn-abort-workout" class="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition">
+                        Abbrechen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-quick" class="view-content space-y-4 hidden">
+            <div class="bg-cardBg rounded-2xl p-6 shadow-xl border border-cardBorder">
+                <h2 class="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-cardBorder pb-2 mb-4">
+                    <i data-lucide="plus" class="text-neon w-5 h-5"></i> Einzelnen Satz eintragen
+                </h2>
+
+                <div class="mb-4">
+                    <label class="block text-xs text-slate-400 font-bold uppercase mb-2">Griffart</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
+                        <button onclick="setGripQuick('Obergriff')" id="grip-quick-Obergriff" class="grip-quick-btn py-2 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Obergriff</button>
+                        <button onclick="setGripQuick('Untergriff')" id="grip-quick-Untergriff" class="grip-quick-btn py-2 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Untergriff</button>
+                        <button onclick="setGripQuick('Hammergriff')" id="grip-quick-Hammergriff" class="grip-quick-btn py-2 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Hammergriff</button>
+                        <button onclick="setGripQuick('Scapula')" id="grip-quick-Scapula" class="grip-quick-btn py-2 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Scapula</button>
+                    </div>
+                </div>
+
+                <label class="block text-center text-xs text-slate-400 font-bold uppercase mb-2">Anzahl Wiederholungen</label>
+                <div class="flex justify-center items-center gap-4 mb-6">
+                    <button id="btn-quick-minus" class="w-12 h-12 bg-slate-800 rounded-xl border border-slate-700 flex justify-center items-center active:bg-slate-700 transition text-white">
+                        <i data-lucide="minus"></i>
+                    </button>
+                    
+                    <input type="number" id="quick-rep-input" value="5" min="1" max="99" 
+                        class="w-24 text-center bg-darkBg text-4xl font-bold text-white py-2 rounded-xl border border-slate-700 focus:border-neon focus:outline-none transition font-mono">
+                    
+                    <button id="btn-quick-plus" class="w-12 h-12 bg-slate-800 rounded-xl border border-slate-700 flex justify-center items-center active:bg-slate-700 transition text-white">
+                        <i data-lucide="plus"></i>
+                    </button>
+                </div>
+                
+                <button id="btn-save-quick" class="w-full bg-neon hover:bg-neonDark text-darkBg font-black text-base py-3.5 rounded-xl shadow-md active:scale-95 transition flex justify-center items-center gap-2 uppercase tracking-wider">
+                    <i data-lucide="check-circle"></i> Eintrag speichern
+                </button>
+            </div>
+        </div>
+
+        <div id="view-history" class="view-content space-y-4 hidden">
+            
+            <div class="flex justify-between bg-cardBg p-1.5 rounded-xl border border-cardBorder text-xs font-bold overflow-x-auto no-scrollbar gap-1">
+                <button onclick="setStatsFilter('day')" id="filter-day" class="flex-1 py-2 px-2 rounded-lg text-center filter-pill transition bg-slate-800 text-white">Tag</button>
+                <button onclick="setStatsFilter('week')" id="filter-week" class="flex-1 py-2 px-2 rounded-lg text-center filter-pill transition text-slate-400 hover:text-white">Woche</button>
+                <button onclick="setStatsFilter('month')" id="filter-month" class="flex-1 py-2 px-2 rounded-lg text-center filter-pill transition text-slate-400 hover:text-white">Monat</button>
+                <button onclick="setStatsFilter('year')" id="filter-year" class="flex-1 py-2 px-2 rounded-lg text-center filter-pill transition text-slate-400 hover:text-white">Jahr</button>
+                <button onclick="setStatsFilter('total')" id="filter-total" class="flex-1 py-2 px-2 rounded-lg text-center filter-pill transition text-slate-400 hover:text-white">Gesamt</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-cardBg p-4 rounded-xl border border-cardBorder flex flex-col justify-between">
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Klimmzüge Gesamt</span>
+                    <span class="text-3xl font-black text-neon mt-2" id="stats-total-reps">0</span>
+                </div>
+                <div class="bg-cardBg p-4 rounded-xl border border-cardBorder flex flex-col justify-between">
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Absolvierte Sätze</span>
+                    <span class="text-3xl font-black text-white mt-2" id="stats-total-sets">0</span>
+                </div>
+                <div class="bg-cardBg p-4 rounded-xl border border-cardBorder flex flex-col justify-between col-span-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Beliebtester Griff</span>
+                        <span class="text-xs bg-slate-800 text-neon px-2.5 py-0.5 rounded-full border border-slate-700" id="stats-fav-grip">Keine Daten</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="calendar-days" class="w-4 h-4"></i> Eintragshistorie
+                </h3>
+                <div id="history-list-container" class="space-y-3">
+                    </div>
+            </div>
+        </div>
+
+        <div id="view-settings" class="view-content space-y-4 hidden">
+            <div class="bg-cardBg rounded-2xl p-6 shadow-xl border border-cardBorder space-y-6">
+                <h2 class="text-base font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-cardBorder pb-2">
+                    <i data-lucide="settings" class="text-neon w-5 h-5"></i> Audio & App Einstellungen
+                </h2>
+
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Dauerschleife "pull.mp3"</h3>
+                        <p class="text-[11px] text-slate-400">Musik läuft im Hintergrund während Workouts</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-music" class="sr-only peer" onchange="toggleMusicSetting()">
+                        <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neon peer-checked:after:bg-darkBg peer-checked:after:border-darkBg"></div>
+                    </label>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-sm font-semibold text-white">Klimmzug Ton-Effekt</h3>
+                        <p class="text-[11px] text-slate-400">Akustisches Signal bei jedem geschafften Klimmzug</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-sound" class="sr-only peer" checked onchange="toggleSoundSetting()">
+                        <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neon peer-checked:after:bg-darkBg peer-checked:after:border-darkBg"></div>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 font-bold uppercase mb-2">Sound-Effekt Typ</label>
+                    <div class="grid grid-cols-3 gap-2 text-xs font-semibold">
+                        <button onclick="setSoundType('beep')" id="sound-beep" class="sound-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">High Beep</button>
+                        <button onclick="setSoundType('chime')" id="sound-chime" class="sound-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Synth Chime</button>
+                        <button onclick="setSoundType('laser')" id="sound-laser" class="sound-btn py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 transition">Laser Blip</button>
+                    </div>
+                    <button onclick="testActiveSound()" class="w-full mt-3 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-xl text-xs font-semibold flex justify-center items-center gap-1">
+                        <i data-lucide="volume-2" class="w-4 h-4"></i> Test-Ton abspielen
+                    </button>
+                </div>
+
+                <div class="pt-4 border-t border-cardBorder">
+                    <button onclick="resetData()" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition flex justify-center items-center gap-2">
+                        <i data-lucide="trash-2"></i> Alle App-Daten zurücksetzen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-cardBg/95 backdrop-blur-md border-t border-cardBorder py-3 px-6 shadow-[0_-5px_20px_rgba(0,0,0,0.5)] z-50">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <button onclick="switchTab('routine')" id="nav-routine" class="flex flex-col items-center gap-1 text-neon transition font-semibold">
+                <i data-lucide="dumbbell" class="w-6 h-6"></i>
+                <span class="text-[10px] tracking-wide">Routine</span>
+            </button>
+            <button onclick="switchTab('quick')" id="nav-quick" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition font-semibold">
+                <i data-lucide="plus-circle" class="w-6 h-6"></i>
+                <span class="text-[10px] tracking-wide">Schnellstart</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition font-semibold">
+                <i data-lucide="history" class="w-6 h-6"></i>
+                <span class="text-[10px] tracking-wide">Verlauf</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition font-semibold">
+                <i data-lucide="sliders" class="w-6 h-6"></i>
+                <span class="text-[10px] tracking-wide">Settings</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        // --- DATA & STATE ---
+        let db = {
+            workouts: JSON.parse(localStorage.getItem('pu_workouts_db')) || [],
+            config: JSON.parse(localStorage.getItem('pu_config_db')) || {
+                grip: 'Obergriff',
+                sequence: '5,5,5,4,4,4,3',
+                rest: 90,
+                tempo: 2.0
+            },
+            settings: JSON.parse(localStorage.getItem('pu_settings_db')) || {
+                musicEnabled: false,
+                soundEnabled: true,
+                soundType: 'beep'
+            }
+        };
+
+        // Live Training Status
+        let activeWorkout = null; 
+        let activeWorkoutInterval = null;
+        let statsFilter = 'day';
+
+        // --- AUDIO / VIBRATION ENGINE ---
+        function playRepSound() {
+            if (!db.settings.soundEnabled) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                if (db.settings.soundType === 'beep') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.15);
+                } else if (db.settings.soundType === 'chime') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                    osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.08); // G5
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                } else if (db.settings.soundType === 'laser') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.25);
+                }
+            } catch (e) {
+                console.log("Audio Error:", e);
+            }
+        }
+
+        function playRestOverSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, ctx.currentTime);
+                osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
+                
+                if (navigator.vibrate) {
+                    navigator.vibrate([200, 100, 200]);
+                }
+            } catch (e) {}
+        }
+
+        function playShortTick() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, ctx.currentTime);
+                gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+                
+                osc.start();
+                osc.stop(ctx.currentTime + 0.05);
+            } catch (e) {}
+        }
+
+        function toggleBgMusic(play) {
+            const music = document.getElementById('bg-music');
+            if (play && db.settings.musicEnabled) {
+                music.play().catch(e => console.log("Music autoplay blocked. Starts after touch.", e));
+            } else {
+                music.pause();
+            }
+        }
+
+        // --- CONTROLLER INIT ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
+
+        function initApp() {
+            // Datum setzen
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date-display').textContent = new Date().toLocaleDateString('de-DE', options);
+
+            // Inputs initialisieren aus Config
+            document.getElementById('routine-sequence-input').value = db.config.sequence;
+            document.getElementById('routine-rest-input').value = db.config.rest;
+            updateTempoUI(db.config.tempo);
+            setGrip(db.config.grip);
+            setGripQuick(db.config.grip);
+
+            // Settings UI setzen
+            document.getElementById('setting-music').checked = db.settings.musicEnabled;
+            document.getElementById('setting-sound').checked = db.settings.soundEnabled;
+            updateSoundTypeUI();
+
+            // Quick Entry rep-Wert setzen
+            if (db.workouts.length > 0) {
+                document.getElementById('quick-rep-input').value = db.workouts[0].reps;
+            }
+
+            renderGlobalStats();
+            lucide.createIcons();
+        }
+
+        function saveDb() {
+            localStorage.setItem('pu_workouts_db', JSON.stringify(db.workouts));
+            localStorage.setItem('pu_config_db', JSON.stringify(db.config));
+            localStorage.setItem('pu_settings_db', JSON.stringify(db.settings));
+            renderGlobalStats();
+        }
+
+        // --- APP NAVIGATION ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+
+            // Nav Bar Style Update
+            document.querySelectorAll('nav button').forEach(el => {
+                el.classList.remove('text-neon');
+                el.classList.add('text-slate-400', 'hover:text-white');
+            });
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.classList.remove('text-slate-400', 'hover:text-white');
+            activeBtn.classList.add('text-neon');
+        }
+
+        // --- WORKOUT CONFIGURATION & INPUTS ---
+        function setGrip(grip) {
+            db.config.grip = grip;
+            document.querySelectorAll('.grip-btn').forEach(btn => {
+                btn.classList.replace('bg-neon', 'bg-slate-800');
+                btn.classList.replace('text-darkBg', 'text-slate-300');
+                btn.classList.replace('border-neon', 'border-slate-700');
+            });
+            const activeBtn = document.getElementById(`grip-${grip}`);
+            activeBtn.classList.replace('bg-slate-800', 'bg-neon');
+            activeBtn.classList.replace('text-slate-300', 'text-darkBg');
+            activeBtn.classList.replace('border-slate-700', 'border-neon');
+            saveDb();
+        }
+
+        function setGripQuick(grip) {
+            db.config.grip = grip; // teilt sich den default Grip
+            document.querySelectorAll('.grip-quick-btn').forEach(btn => {
+                btn.classList.replace('bg-neon', 'bg-slate-800');
+                btn.classList.replace('text-darkBg', 'text-slate-300');
+                btn.classList.replace('border-neon', 'border-slate-700');
+            });
+            const activeBtn = document.getElementById(`grip-quick-${grip}`);
+            activeBtn.classList.replace('bg-slate-800', 'bg-neon');
+            activeBtn.classList.replace('text-slate-300', 'text-darkBg');
+            activeBtn.classList.replace('border-slate-700', 'border-neon');
+            saveDb();
+        }
+
+        function applyPreset(seq) {
+            document.getElementById('routine-sequence-input').value = seq;
+            db.config.sequence = seq;
+            saveDb();
+        }
+
+        function adjustRest(val) {
+            const input = document.getElementById('routine-rest-input');
+            let current = parseInt(input.value) || 90;
+            current = Math.max(10, current + val);
+            input.value = current;
+            db.config.rest = current;
+            saveDb();
+        }
+
+        function adjustTempo(val) {
+            db.config.tempo = Math.max(0.5, Math.min(10, db.config.tempo + val));
+            updateTempoUI(db.config.tempo);
+            saveDb();
+        }
+
+        function updateTempoUI(val) {
+            document.getElementById('routine-tempo-display').textContent = val.toFixed(1) + 's';
+        }
+
+        // --- MANUAL QUICK ENTRY CONTROLS ---
+        const quickInput = document.getElementById('quick-rep-input');
+        document.getElementById('btn-quick-minus').addEventListener('click', () => {
+            let val = parseInt(quickInput.value) || 0;
+            if (val > 1) quickInput.value = val - 1;
+        });
+        document.getElementById('btn-quick-plus').addEventListener('click', () => {
+            let val = parseInt(quickInput.value) || 0;
+            quickInput.value = val + 1;
+        });
+
+        document.getElementById('btn-save-quick').addEventListener('click', () => {
+            const reps = parseInt(quickInput.value) || 0;
+            if (reps <= 0) return;
+            addManualSet(reps, db.config.grip);
+            
+            // Animation Feedback
+            const btn = document.getElementById('btn-save-quick');
+            btn.classList.replace('bg-neon', 'bg-blue-500');
+            btn.innerHTML = `<i data-lucide="check"></i> Gespeichert!`;
+            lucide.createIcons();
+            setTimeout(() => {
+                btn.classList.replace('bg-blue-500', 'bg-neon');
+                btn.innerHTML = `<i data-lucide="check-circle"></i> Eintrag speichern`;
+                lucide.createIcons();
+            }, 1500);
+        });
+
+        function addManualSet(reps, grip) {
+            const now = new Date();
+            const newSet = {
+                id: Date.now().toString(),
+                reps: reps,
+                grip: grip,
+                timestamp: now.getTime(),
+                dateStr: now.toLocaleDateString('de-DE')
+            };
+            db.workouts.unshift(newSet);
+            saveDb();
+        }
+
+        // --- WORKOUT ENGINE (TRAINING ENGINE) ---
+        document.getElementById('btn-start-routine').addEventListener('click', () => {
+            // Sequence parsen
+            const rawSeq = document.getElementById('routine-sequence-input').value;
+            const sequence = rawSeq.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0);
+            
+            if (sequence.length === 0) {
+                alert("Bitte gültige Sätze eingeben (z.B. 5,5,5)");
+                return;
+            }
+
+            // Config speichern vor Start
+            db.config.sequence = rawSeq;
+            db.config.rest = parseInt(document.getElementById('routine-rest-input').value) || 90;
+            saveDb();
+
+            // Setup State Initialisieren
+            activeWorkout = {
+                sets: sequence,
+                currentSetIndex: 0,
+                phase: 'get-ready', // 'get-ready' -> 'exercise' -> 'rest' -> 'done'
+                ticks: 0,
+                currentRep: 0,
+                restTime: db.config.rest,
+                tempo: db.config.tempo,
+                grip: db.config.grip,
+                workoutSetsSaved: 0
+            };
+
+            // UI Übergang
+            document.getElementById('routine-setup-card').classList.add('hidden');
+            document.getElementById('routine-active-card').classList.remove('hidden');
+            
+            toggleBgMusic(true);
+            runWorkoutTick();
+        });
+
+        document.getElementById('btn-abort-workout').addEventListener('click', () => {
+            if (confirm("Workout wirklich abbrechen? Bereits fertige Sätze bleiben gespeichert.")) {
+                endWorkout();
+            }
+        });
+
+        document.getElementById('btn-skip-phase').addEventListener('click', () => {
+            if (activeWorkout.phase === 'rest') {
+                transitionToExercise();
+            } else if (activeWorkout.phase === 'get-ready') {
+                transitionToExercise();
+            }
+        });
+
+        function endWorkout() {
+            clearInterval(activeWorkoutInterval);
+            activeWorkout = null;
+            document.getElementById('routine-setup-card').classList.remove('hidden');
+            document.getElementById('routine-active-card').classList.add('hidden');
+            toggleBgMusic(false);
+            renderGlobalStats();
+        }
+
+        function runWorkoutTick() {
+            clearInterval(activeWorkoutInterval);
+            
+            // UI State für aktuellen Zustand aufsetzen
+            const totalSets = activeWorkout.sets.length;
+            const currentRepsNeeded = activeWorkout.sets[activeWorkout.currentSetIndex];
+            
+            document.getElementById('active-grip-badge').textContent = activeWorkout.grip;
+            document.getElementById('active-set-title').textContent = `Satz ${activeWorkout.currentSetIndex + 1} von ${totalSets}`;
+            
+            // Preview String bauen
+            const seqPreview = activeWorkout.sets.map((val, idx) => {
+                if (idx === activeWorkout.currentSetIndex) return `<span class="text-neon underline font-bold">${val}</span>`;
+                return val;
+            }).join(' - ');
+            document.getElementById('active-sequence-preview').innerHTML = seqPreview;
+
+            if (activeWorkout.phase === 'get-ready') {
+                // 3 Sekunden Vorbereitungstimer
+                let countdown = 3;
+                document.getElementById('active-phase-label').textContent = 'Vorbereitung';
+                document.getElementById('active-phase-label').className = "text-xs font-bold uppercase tracking-widest text-amber-500 mb-1";
+                document.getElementById('active-main-display').textContent = countdown;
+                document.getElementById('active-sub-label').textContent = 'An die Stange!';
+                document.getElementById('btn-skip-phase').classList.remove('hidden');
+                document.getElementById('btn-skip-phase').textContent = "Start abkürzen";
+
+                activeWorkoutInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        document.getElementById('active-main-display').textContent = countdown;
+                        playShortTick();
+                    } else {
+                        transitionToExercise();
+                    }
+                }, 1000);
+
+            } else if (activeWorkout.phase === 'exercise') {
+                // Aktiver Satz läuft
+                document.getElementById('active-phase-label').textContent = 'Satz läuft';
+                document.getElementById('active-phase-label').className = "text-xs font-bold uppercase tracking-widest text-neon mb-1";
+                document.getElementById('btn-skip-phase').classList.add('hidden'); // Kann nicht übersprungen werden, muss ausgeführt werden
+
+                activeWorkout.currentRep = 0;
+                let msPerRep = activeWorkout.tempo * 1000;
+                let currentRepMs = 0;
+                const updateFreq = 100; // Tick alle 100ms für geschmeidige UI
+
+                document.getElementById('active-main-display').textContent = `0 / ${currentRepsNeeded}`;
+                document.getElementById('active-sub-label').textContent = 'Hochziehen...';
+
+                activeWorkoutInterval = setInterval(() => {
+                    currentRepMs += updateFreq;
+                    let singleRepProgress = (currentRepMs / msPerRep) * 100;
+                    
+                    // Tempo Pacer Feedback (Hoch vs Runter)
+                    if (singleRepProgress < 50) {
+                        document.getElementById('active-sub-label').innerHTML = `<i data-lucide="chevrons-up" class="inline w-5 h-5 text-neon animate-bounce"></i> PULL (Hoch!)`;
+                        document.getElementById('workout-glow').style.transform = 'scale(1.5)';
+                    } else {
+                        document.getElementById('active-sub-label').innerHTML = `<i data-lucide="chevrons-down" class="inline w-5 h-5 text-blue-400"></i> CONTROL (Runter...)`;
+                        document.getElementById('workout-glow').style.transform = 'scale(0.8)';
+                    }
+                    lucide.createIcons();
+
+                    // Progress Bar
+                    const overallProgress = ((activeWorkout.currentRep + (currentRepMs / msPerRep)) / currentRepsNeeded) * 100;
+                    document.getElementById('active-progress-bar').style.width = `${overallProgress}%`;
+                    document.getElementById('active-progress-right').textContent = `${Math.round(overallProgress)}%`;
+
+                    if (currentRepMs >= msPerRep) {
+                        // Rep Beendet
+                        activeWorkout.currentRep++;
+                        playRepSound();
+                        document.getElementById('active-main-display').textContent = `${activeWorkout.currentRep} / ${currentRepsNeeded}`;
+                        currentRepMs = 0;
+
+                        if (activeWorkout.currentRep >= currentRepsNeeded) {
+                            // Satz Komplett!
+                            clearInterval(activeWorkoutInterval);
+                            addManualSet(currentRepsNeeded, activeWorkout.grip);
+                            activeWorkout.workoutSetsSaved++;
+
+                            if (activeWorkout.currentSetIndex + 1 < totalSets) {
+                                // Transition to Rest
+                                transitionToRest();
+                            } else {
+                                // Workout fertig!
+                                transitionToFinished();
+                            }
+                        }
+                    }
+                }, updateFreq);
+
+            } else if (activeWorkout.phase === 'rest') {
+                // Pausenphase läuft
+                document.getElementById('active-phase-label').textContent = 'Pause';
+                document.getElementById('active-phase-label').className = "text-xs font-bold uppercase tracking-widest text-blue-400 mb-1";
+                document.getElementById('active-sub-label').textContent = 'Erholen & Durchatmen';
+                document.getElementById('btn-skip-phase').classList.remove('hidden');
+                document.getElementById('btn-skip-phase').textContent = "Pause überspringen";
+
+                let restSecondsLeft = activeWorkout.restTime;
+                updateRestTimerUI(restSecondsLeft, activeWorkout.restTime);
+
+                activeWorkoutInterval = setInterval(() => {
+                    restSecondsLeft--;
+                    updateRestTimerUI(restSecondsLeft, activeWorkout.restTime);
+
+                    if (restSecondsLeft <= 0) {
+                        playRestOverSound();
+                        transitionToGetReady();
+                    }
+                }, 1000);
+            }
+        }
+
+        function transitionToExercise() {
+            activeWorkout.phase = 'exercise';
+            runWorkoutTick();
+        }
+
+        function transitionToRest() {
+            activeWorkout.phase = 'rest';
+            runWorkoutTick();
+        }
+
+        function transitionToGetReady() {
+            activeWorkout.currentSetIndex++;
+            activeWorkout.phase = 'get-ready';
+            runWorkoutTick();
+        }
+
+        function transitionToFinished() {
+            playRestOverSound();
+            alert(`Herzlichen Glückwunsch! Du hast das Workout erfolgreich beendet. Sätze: ${activeWorkout.workoutSetsSaved}`);
+            endWorkout();
+        }
+
+        function updateRestTimerUI(left, total) {
+            const m = Math.floor(left / 60).toString().padStart(2, '0');
+            const s = (left % 60).toString().padStart(2, '0');
+            document.getElementById('active-main-display').textContent = `${m}:${s}`;
+            
+            const pct = (left / total) * 100;
+            document.getElementById('active-progress-bar').style.width = `${pct}%`;
+            document.getElementById('active-progress-right').textContent = `${Math.round(pct)}%`;
+        }
+
+
+        // --- STATS & HISTORY RENDERER ---
+        function setStatsFilter(filter) {
+            statsFilter = filter;
+            document.querySelectorAll('.filter-pill').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-white');
+                btn.classList.add('text-slate-400', 'hover:text-white');
+            });
+            document.getElementById(`filter-${filter}`).classList.add('bg-slate-800', 'text-white');
+            document.getElementById(`filter-${filter}`).classList.remove('text-slate-400', 'hover:text-white');
+            renderGlobalStats();
+        }
+
+        function getFilteredWorkouts() {
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+            if (statsFilter === 'day') {
+                return db.workouts.filter(w => w.timestamp >= todayStart);
+            } else if (statsFilter === 'week') {
+                const limit = Date.now() - (7 * 24 * 60 * 60 * 1000);
+                return db.workouts.filter(w => w.timestamp >= limit);
+            } else if (statsFilter === 'month') {
+                const limit = Date.now() - (30 * 24 * 60 * 60 * 1000);
+                return db.workouts.filter(w => w.timestamp >= limit);
+            } else if (statsFilter === 'year') {
+                const limit = Date.now() - (365 * 24 * 60 * 60 * 1000);
+                return db.workouts.filter(w => w.timestamp >= limit);
+            } else {
+                return db.workouts; // Gesamt
+            }
+        }
+
+        function renderGlobalStats() {
+            // Heute Gesamt für den Header berechnen
+            const todayStart = new Date().setHours(0,0,0,0);
+            const todayReps = db.workouts
+                .filter(w => w.timestamp >= todayStart)
+                .reduce((acc, curr) => acc + curr.reps, 0);
+            document.getElementById('header-daily-total').textContent = todayReps;
+
+            // Filterbasierte Stats
+            const filtered = getFilteredWorkouts();
+            const totalReps = filtered.reduce((acc, curr) => acc + curr.reps, 0);
+            const totalSets = filtered.length;
+
+            document.getElementById('stats-total-reps').textContent = totalReps;
+            document.getElementById('stats-total-sets').textContent = totalSets;
+
+            // Beliebtester Griff
+            if (filtered.length > 0) {
+                const counts = {};
+                filtered.forEach(w => counts[w.grip] = (counts[w.grip] || 0) + 1);
+                let maxGrip = '';
+                let maxVal = 0;
+                for (const [grip, count] of Object.entries(counts)) {
+                    if (count > maxVal) {
+                        maxVal = count;
+                        maxGrip = grip;
+                    }
+                }
+                document.getElementById('stats-fav-grip').textContent = `${maxGrip} (${maxVal}x)`;
+            } else {
+                document.getElementById('stats-fav-grip').textContent = 'Keine Einträge';
+            }
+
+            // Historien-Liste füllen
+            renderHistoryList();
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('history-list-container');
+            container.innerHTML = '';
+
+            const filtered = getFilteredWorkouts();
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">Keine Sätze für den gewählten Zeitraum vorhanden.</p>`;
+                return;
+            }
+
+            // Gruppierung nach Datum für lesbare Darstellung
+            const grouped = filtered.reduce((acc, curr) => {
+                const dateKey = curr.dateStr;
+                if (!acc[dateKey]) acc[dateKey] = [];
+                acc[dateKey].push(curr);
+                return acc;
+            }, {});
+
+            for (const [date, sets] of Object.entries(grouped)) {
+                const isToday = date === new Date().toLocaleDateString('de-DE');
+                const titleStr = isToday ? 'Heute' : date;
+                const dayTotal = sets.reduce((sum, s) => sum + s.reps, 0);
+
+                const groupHtml = `
+                    <div class="bg-cardBg/30 p-2.5 rounded-2xl border border-cardBorder mb-4">
+                        <div class="flex justify-between items-center text-xs font-extrabold text-slate-400 mb-2.5 px-1 uppercase tracking-wider">
+                            <span>${titleStr}</span>
+                            <span class="text-neon">${dayTotal} Reps</span>
+                        </div>
+                        <div class="space-y-1.5">
+                            ${sets.map(set => {
+                                const timeStr = new Date(set.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                                return `
+                                    <div class="bg-cardBg px-3 py-2 rounded-xl border border-cardBorder flex justify-between items-center text-sm">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-darkBg text-neon font-black flex justify-center items-center text-base border border-slate-700">
+                                                ${set.reps}
+                                            </div>
+                                            <div>
+                                                <div class="text-xs font-bold text-white">${set.grip}</div>
+                                                <div class="text-[10px] text-slate-400 flex items-center gap-0.5"><i data-lucide="clock" class="w-2.5 h-2.5"></i> ${timeStr} Uhr</div>
+                                            </div>
+                                        </div>
+                                        <button onclick="deleteSet('${set.id}')" class="text-slate-500 hover:text-red-400 p-1.5 rounded-lg active:bg-slate-800 transition">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', groupHtml);
+            }
+            lucide.createIcons();
+        }
+
+        function deleteSet(id) {
+            if (confirm("Satz wirklich löschen?")) {
+                db.workouts = db.workouts.filter(w => w.id !== id);
+                saveDb();
+            }
+        }
+
+        // --- SETTINGS CONTROLLER ---
+        function toggleMusicSetting() {
+            db.settings.musicEnabled = document.getElementById('setting-music').checked;
+            saveDb();
+        }
+
+        function toggleSoundSetting() {
+            db.settings.soundEnabled = document.getElementById('setting-sound').checked;
+            saveDb();
+        }
+
+        function setSoundType(type) {
+            db.settings.soundType = type;
+            updateSoundTypeUI();
+            saveDb();
+            playRepSound();
+        }
+
+        function updateSoundTypeUI() {
+            document.querySelectorAll('.sound-btn').forEach(btn => {
+                btn.classList.replace('bg-neon', 'bg-slate-800');
+                btn.classList.replace('text-darkBg', 'text-slate-300');
+                btn.classList.replace('border-neon', 'border-slate-700');
+            });
+            const active = document.getElementById(`sound-${db.settings.soundType}`);
+            if (active) {
+                active.classList.replace('bg-slate-800', 'bg-neon');
+                active.classList.replace('text-slate-300', 'text-darkBg');
+                active.classList.replace('border-slate-700', 'border-neon');
+            }
+        }
+
+        function testActiveSound() {
+            playRepSound();
+        }
+
+        function resetData() {
+            if (confirm("Möchtest du wirklich alle aufgezeichneten Sätze und Einstellungen unwiderruflich löschen?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
